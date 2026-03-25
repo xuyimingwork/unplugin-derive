@@ -1,0 +1,22 @@
+{
+  "name": "unplugin-derive",
+  "version": "0.0.1",
+  "description": "Generate derived artifacts from your project files with a flexible, unplugin-based abstraction.",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist"],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Xu Yiming",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xuyimingwork/unplugin-derive.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "provenance": true
+  }
+}
