@@ -14,16 +14,18 @@ export const unpluginDerive = createUnplugin<DerivePluginOptions | undefined>(
     return {
       name: 'unplugin-derive',
       buildStart() {
-        return runtime.runFull()
+        return runtime.run({ type: 'full', changes: [] })
       },
       watchChange(id: string, change?: { event?: string }) {
-        if (!id) return runtime.runFull()
-        return runtime.runPatch([
-          {
-            type: mapWatchEventType(change?.event),
-            path: id
-          }
-        ])
+        return runtime.run({
+          type: 'patch',
+          changes: [
+            {
+              type: mapWatchEventType(change?.event),
+              path: id
+            }
+          ]
+        })
       }
     }
   }
