@@ -13,7 +13,8 @@ module.exports = {
       root: __dirname,
       watch: ['src/api/**/*.js'],
       load(filePath) {
-        if (filePath.endsWith('.js')) return 'text'
+        if (filePath.endsWith('/index.js')) return undefined
+        if (filePath.endsWith('.js')) return 'import'
         return undefined
       },
       derive: createWebpackDtsDerive({

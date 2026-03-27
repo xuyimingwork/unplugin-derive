@@ -39,11 +39,79 @@ export default defineConfig({
 })
 ```
 
+### 其它构建工具（折叠）
+
+<details>
+<summary>Rollup / Webpack / esbuild 最小用法</summary>
+
+#### Rollup
+
+```ts
+import Derive from 'unplugin-derive/rollup'
+
+export default {
+  plugins: [
+    Derive({
+      watch: ['src/api/**/*.js'],
+      async derive() {
+        return {
+          files: [{ path: 'src/generated.txt', content: 'from rollup\n' }]
+        }
+      }
+    })
+  ]
+}
+```
+
+#### Webpack
+
+```js
+const Derive = require('unplugin-derive/webpack').default
+
+module.exports = {
+  plugins: [
+    Derive({
+      watch: ['src/api/**/*.js'],
+      async derive() {
+        return {
+          files: [{ path: 'src/generated.txt', content: 'from webpack\n' }]
+        }
+      }
+    })
+  ]
+}
+```
+
+#### esbuild
+
+```ts
+import { build } from 'esbuild'
+import Derive from 'unplugin-derive/esbuild'
+
+await build({
+  entryPoints: ['src/index.ts'],
+  bundle: true,
+  outfile: 'dist/index.js',
+  plugins: [
+    Derive({
+      watch: ['src/api/**/*.js'],
+      async derive() {
+        return {
+          files: [{ path: 'src/generated.txt', content: 'from esbuild\n' }]
+        }
+      }
+    })
+  ]
+})
+```
+
+</details>
+
 ### 选项
 
 - **root**: 工程根目录（默认 `process.cwd()`）
 - **watch**: 监听文件 glob（相对 `root`）
-- **load**: 可选内容加载器。返回 `undefined`（不加载）/`"text"`/`"json"`/`"buffer"`/`{ content }`
+- **load**: 可选内容加载器。返回 `undefined`（不加载）/`"text"`/`"json"`/`"buffer"`/`"import"`/`{ content }`
 - **derive**: 核心回调，签名 `derive(event: DeriveEvent)`，返回 `{ files }`
 - **verbose**: 输出运行日志（默认 `false`）
 

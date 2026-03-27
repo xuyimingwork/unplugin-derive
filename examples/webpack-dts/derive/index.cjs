@@ -1,167 +1,7 @@
-const parser = require('@babel/parser')
 const fs = require('node:fs')
 const path = require('node:path')
 const DEFAULT_INCLUDE = ['src/api/**/*.js']
 const FALLBACK_INCLUDE_BASE = 'src/api'
-
-function templateToDisplay(node) {
-  let s = ''
-  const quasis = node.quasis || []
-  const exprs = node.expressions || []
-  for (let i = 0; i < quasis.length; i++) {
-    const q = quasis[i].value
-    s += q.cooked != null ? q.cooked : q.raw
-    if (i < exprs.length) s += '${...}'
-  }
-  return s
-}
-
-function getObjectPropertyKey(prop) {
-  if (prop.key && prop.key.type === 'Identifier') return prop.key.name
-  if (prop.key && prop.key.type === 'StringLiteral') return prop.key.value
-  return null
-}
-
-function valueNodeToJsonish(node, depth) {
-  if (!node || depth > 8) return undefined
-  switch (node.type) {
-    case 'StringLiteral':
-      return node.value
-    case 'NumericLiteral':
-      return node.value
-    case 'BooleanLiteral':
-      return node.value
-    case 'NullLiteral':
-      return null
-    case 'TemplateLiteral':
-      return templateToDisplay(node)
-    case 'ObjectExpression': {
-      const out = {}
-      for (const prop of node.properties || []) {
-        if (prop.type !== 'ObjectProperty' || prop.computed) return undefined
-        const key = getObjectPropertyKey(prop)
-        if (key == null) return undefined
-        const next = valueNodeToJsonish(prop.value, depth + 1)
-        if (next === undefined) return undefined
-        out[key] = next
-      }
-      return out
-    }
-    case 'ArrayExpression': {
-      const out = []
-      for (const el of node.elements || []) {
-        if (el == null) continue
-        const next = valueNodeToJsonish(el, depth + 1)
-        if (next === undefined) return undefined
-        out.push(next)
-      }
-      return out
-    }
-    default:
-      return undefined
-  }
-}
-
-function astNodeToDisplayString(node) {
-  if (!node) return undefined
-  switch (node.type) {
-    case 'StringLiteral':
-      return node.value
-    case 'NumericLiteral':
-      return String(node.value)
-    case 'BooleanLiteral':
-      return String(node.value)
-    case 'NullLiteral':
-      return 'null'
-    case 'TemplateLiteral':
-      return templateToDisplay(node)
-    case 'ObjectExpression': {
-      const v = valueNodeToJsonish(node, 0)
-      return v === undefined ? '[dynamic]' : JSON.stringify(v)
-    }
-    case 'ArrayExpression': {
-      const v = valueNodeToJsonish(node, 0)
-      return v === undefined ? '[dynamic]' : JSON.stringify(v)
-    }
-    default:
-      return '[dynamic]'
-  }
-}
-
-function objectExpressionToItemRecord(objExpr) {
-  const out = {}
-  let methodOk = false
-  for (const prop of objExpr.properties || []) {
-    if (prop.type !== 'ObjectProperty' || prop.computed) continue
-    const key =
-      prop.key && prop.key.type === 'Identifier'
-        ? prop.key.name
-        : prop.key && prop.key.type === 'StringLiteral'
-          ? prop.key.value
-          : null
-    if (key == null) continue
-    if (key === 'method' && prop.value && prop.value.type === 'StringLiteral') {
-      out.method = prop.value.value
-      methodOk = true
-      continue
-    }
-    const value = astNodeToDisplayString(prop.value)
-    if (value !== undefined) out[key] = value
-  }
-  if (!methodOk || !out.method) return null
-  return out
-}
-
-function collectArrayBindings(program) {
-  const out = new Map()
-  for (const stmt of program.body || []) {
-    if (stmt.type !== 'VariableDeclaration') continue
-    if (!['const', 'let', 'var'].includes(stmt.kind)) continue
-    for (const d of stmt.declarations || []) {
-      if (
-        d.id &&
-        d.id.type === 'Identifier' &&
-        d.init &&
-        d.init.type === 'ArrayExpression'
-      ) {
-        out.set(d.id.name, d.init)
-      }
-    }
-  }
-  return out
-}
-
-function resolveDefaultExportArray(program) {
-  const bindings = collectArrayBindings(program)
-  for (const stmt of program.body || []) {
-    if (stmt.type !== 'ExportDefaultDeclaration') continue
-    const decl = stmt.declaration
-    if (decl.type === 'ArrayExpression') return decl
-    if (decl.type === 'Identifier') return bindings.get(decl.name) || null
-    return null
-  }
-  return null
-}
-
-function getExportedCategory(program) {
-  for (const stmt of program.body || []) {
-    if (stmt.type !== 'ExportNamedDeclaration' || !stmt.declaration) continue
-    const dec = stmt.declaration
-    if (dec.type !== 'VariableDeclaration') continue
-    for (const d of dec.declarations || []) {
-      if (
-        d.id &&
-        d.id.type === 'Identifier' &&
-        d.id.name === 'category' &&
-        d.init &&
-        d.init.type === 'StringLiteral'
-      ) {
-        return d.init.value
-      }
-    }
-  }
-  return undefined
-}
 
 function escapeJSDoc(text) {
   if (text == null) return ''
@@ -195,34 +35,41 @@ function buildItemJSDoc(item, category, sourceRelPath) {
   return lines.join('\n')
 }
 
-function parseApiFile(code) {
-  let ast
-  try {
-    ast = parser.parse(code, {
-      sourceType: 'module',
-      plugins: [
-        'objectRestSpread',
-        'classProperties',
-        'classPrivateProperties',
-        'classPrivateMethods',
-        'optionalChaining',
-        'nullishCoalescingOperator',
-        'dynamicImport',
-        'topLevelAwait'
-      ]
-    })
-  } catch {
-    return null
+function literalToDisplay(value) {
+  if (value == null) return 'null'
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value) || typeof value === 'object') {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return '[dynamic]'
+    }
   }
-  const program = ast.program
-  const arr = resolveDefaultExportArray(program)
+  return '[dynamic]'
+}
+
+function normalizeApiItem(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  if (typeof raw.method !== 'string' || !raw.method) return null
+  const out = { method: raw.method }
+  for (const [k, v] of Object.entries(raw)) {
+    if (k === 'method') continue
+    out[k] = literalToDisplay(v)
+  }
+  return out
+}
+
+function parseApiModule(moduleExports) {
+  if (!moduleExports || typeof moduleExports !== 'object') return null
+  const arr = Array.isArray(moduleExports.default) ? moduleExports.default : null
   if (!arr) return null
-  const category = getExportedCategory(program)
+  const category =
+    typeof moduleExports.category === 'string' ? moduleExports.category : undefined
   const items = []
-  for (const el of arr.elements || []) {
-    if (!el || el.type !== 'ObjectExpression') continue
-    const rec = objectExpressionToItemRecord(el)
-    if (rec) items.push(rec)
+  for (const el of arr) {
+    const item = normalizeApiItem(el)
+    if (item) items.push(item)
   }
   return { category, items }
 }
@@ -372,7 +219,7 @@ function createWebpackDtsDerive(input) {
     if (event.type === 'full') {
       fileContents.clear()
       for (const change of event.changes) {
-        if (typeof change.content === 'string') {
+        if (change.content !== undefined) {
           fileContents.set(toPosixPath(change.path), change.content)
         }
       }
@@ -382,7 +229,7 @@ function createWebpackDtsDerive(input) {
           fileContents.delete(toPosixPath(change.path))
           continue
         }
-        if (typeof change.content === 'string') {
+        if (change.content !== undefined) {
           fileContents.set(toPosixPath(change.path), change.content)
         }
       }
@@ -399,11 +246,13 @@ function createWebpackDtsDerive(input) {
       const absPath = path.resolve(projectRoot, relPath)
       if (path.relative(apiRoot, absPath).replace(/\\/g, '/') === 'index.js') continue
       filesScanned++
-      const parsed = parseApiFile(content)
+      const parsed = parseApiModule(content)
       if (!parsed) {
         skippedFilePaths.push(relPath)
         if (verbose) {
-          console.warn(`[webpack-dts-example] skip ${relPath}: parse failed or no static export default array`)
+          console.warn(
+            `[webpack-dts-example] skip ${relPath}: parse failed or no default export array`
+          )
         }
         continue
       }
