@@ -35,6 +35,9 @@ jobs:
 
       - name: Verify package
         run: pnpm test:run && pnpm build && pnpm typecheck
+      
+      - name: Setup NPM
+        run: npm install -g npm@latest
 
       - name: Publish to npm with provenance
         run: npm publish --provenance --access public
