@@ -1,4 +1,5 @@
 import path from 'node:path'
+import micromatch from 'micromatch'
 
 export function normalizeSlashes(input: string): string {
   return String(input).replace(/\\/g, '/')
@@ -27,4 +28,9 @@ export function normalizeIncomingAbsPath(root: string, inputPath: string): strin
 export function isWithinRoot(root: string, absPath: string): boolean {
   const rel = path.relative(root, absPath)
   return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel)
+}
+
+export function isPathWatched(path: string, watches: string[]): boolean {
+  const normalized = normalizeSlashes(path)
+  return watches.some(pattern => micromatch.isMatch(normalized, pattern))
 }

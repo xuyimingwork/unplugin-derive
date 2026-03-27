@@ -68,6 +68,12 @@ export type LoadResolver = (path: string) => LoadResult | Promise<LoadResult>
 
 export type GitignoreMatcher = (file: string) => boolean
 export type GitignoreOption = true | string | string[] | GitignoreMatcher
+export type DeriveBuildStartType = 'full' | 'none'
+export type DeriveWatchChangeType = DeriveEvent['type'] | 'none'
+export type DeriveWhen = {
+  buildStart?: DeriveBuildStartType
+  watchChange?: DeriveWatchChangeType
+}
 
 export type DerivePluginOptions = {
   /**
@@ -98,5 +104,9 @@ export type DerivePluginOptions = {
    * 自动将输出文件加入 `root/.gitignore`。
    */
   gitignore?: GitignoreOption
+  /**
+   * 控制各阶段触发 `derive` 的事件类型。
+   */
+  deriveWhen?: DeriveWhen
 }
 

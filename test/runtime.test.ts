@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { resolveOptions } from '../src/core/options.ts'
 import { createDeriveRuntime } from '../src/core/runtime.ts'
 import { createTempRoot, removeDir } from './utils.ts'
 
@@ -19,7 +20,7 @@ describe('createDeriveRuntime', () => {
     await fs.promises.mkdir(path.dirname(srcFile), { recursive: true })
     await fs.promises.writeFile(srcFile, 'foo-content', 'utf8')
 
-    const runtime = createDeriveRuntime({
+    const runtime = createDeriveRuntime(resolveOptions({
       root,
       watch: 'src/**/*.txt',
       load: async () => 'text' as const,
@@ -31,7 +32,7 @@ describe('createDeriveRuntime', () => {
           }
         ]
       })
-    })
+    }))
 
     await runtime.run({ type: 'full', changes: [] })
 
@@ -56,7 +57,7 @@ describe('createDeriveRuntime', () => {
     await fs.promises.mkdir(path.dirname(srcFile), { recursive: true })
     await fs.promises.writeFile(srcFile, 'bar-content', 'utf8')
 
-    const runtime = createDeriveRuntime({
+    const runtime = createDeriveRuntime(resolveOptions({
       root,
       watch: 'src/**/*.txt',
       load: async () => 'text' as const,
@@ -68,7 +69,7 @@ describe('createDeriveRuntime', () => {
           }
         ]
       })
-    })
+    }))
 
     await runtime.run({
       type: 'patch',
@@ -98,7 +99,7 @@ describe('createDeriveRuntime', () => {
     await fs.promises.mkdir(path.dirname(srcFile), { recursive: true })
     await fs.promises.writeFile(srcFile, 'ok', 'utf8')
 
-    const runtime = createDeriveRuntime({
+    const runtime = createDeriveRuntime(resolveOptions({
       root,
       watch: 'src/**/*.txt',
       load: async () => 'text' as const,
@@ -121,7 +122,7 @@ describe('createDeriveRuntime', () => {
           }
         ]
       })
-    })
+    }))
 
     await runtime.run({ type: 'full', changes: [] })
     const output = await fs.promises.readFile(path.join(root, 'generated/a.txt'), 'utf8')
@@ -136,7 +137,7 @@ describe('createDeriveRuntime', () => {
     await fs.promises.mkdir(path.dirname(srcFile), { recursive: true })
     await fs.promises.writeFile(srcFile, 'ok', 'utf8')
 
-    const runtime = createDeriveRuntime({
+    const runtime = createDeriveRuntime(resolveOptions({
       root,
       watch: 'src/**/*.txt',
       load: async () => 'text' as const,
@@ -147,7 +148,7 @@ describe('createDeriveRuntime', () => {
           { path: 'generated/b.txt', content: 'B' }
         ]
       })
-    })
+    }))
 
     await runtime.run({ type: 'full', changes: [] })
     await runtime.run({ type: 'full', changes: [] })
@@ -162,7 +163,7 @@ describe('createDeriveRuntime', () => {
     await fs.promises.mkdir(path.dirname(srcFile), { recursive: true })
     await fs.promises.writeFile(srcFile, 'ok', 'utf8')
 
-    const runtime = createDeriveRuntime({
+    const runtime = createDeriveRuntime(resolveOptions({
       root,
       watch: 'src/**/*.txt',
       load: async () => 'text' as const,
@@ -170,7 +171,7 @@ describe('createDeriveRuntime', () => {
       derive: async () => ({
         files: [{ path: 'generated/a.txt', content: 'A' }]
       })
-    })
+    }))
 
     await runtime.run({ type: 'full', changes: [] })
     const output = await fs.promises.readFile(path.join(root, '.gitignore'), 'utf8')

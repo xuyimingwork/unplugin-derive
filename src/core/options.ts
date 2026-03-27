@@ -1,10 +1,24 @@
 import path from 'node:path'
-import micromatch from 'micromatch'
 import { PLUGIN_NAME } from './constants.js'
-import { isWithinRoot, normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path.js'
+import { ensureGitignoreEntries } from './gitignore.js'
+import { isPathWatched, isWithinRoot, normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path.js'
 import { applyBuiltinLoader } from './builtin-loader.js'
 import { mergeBanner } from './banner-merge.js'
-import type { DerivePluginOptions, EmitResult, GitignoreMatcher, LoadResult } from '../types.js'
+import type { DeriveBuildStartType, DerivePluginOptions, DeriveWatchChangeType, EmitResult, GitignoreMatcher, LoadResult } from '../types.js'
+
+export type DeriveWhenResolved = {
+  buildStart: DeriveBuildStartType
+  watchChange: DeriveWatchChangeType
+}
+
+export type ResolvedDeriveOptions = {
+  root: string
+  watch: string[]
+  load: NonNullable<DerivePluginOptions['load']>
+  derive: DerivePluginOptions['derive']
+  prepareGitignore: (result: EmitResult) => Promise<void>
+  deriveWhen: DeriveWhenResolved
+}
 
 function normalizeRoot(rootInput: DerivePluginOptions['root']): string {
   return path.resolve(rootInput ?? process.cwd())
@@ -25,6 +39,13 @@ function normalizeWatch(watchInput: DerivePluginOptions['watch'], root: string):
 
 function normalizeVerbose(verboseInput: DerivePluginOptions['verbose']): boolean {
   return verboseInput === true
+}
+
+function normalizeDeriveWhen(deriveWhenInput: DerivePluginOptions['deriveWhen']): DeriveWhenResolved {
+  return {
+    buildStart: deriveWhenInput?.buildStart ?? 'full',
+    watchChange: deriveWhenInput?.watchChange ?? 'patch'
+  }
 }
 
 function createLogger(verbose: boolean): (message: string) => void {
@@ -68,11 +89,6 @@ function normalizeGitignore(
     matcher: undefined,
     entries
   }
-}
-
-function isPathWatched(path: string, watches: string[]): boolean {
-  const normalized = normalizeSlashes(path)
-  return watches.some(pattern => micromatch.isMatch(normalized, pattern))
 }
 
 function createLoadResolver(
@@ -170,31 +186,44 @@ function createDeriveResolver(
   }
 }
 
-export function resolveOptions(userOptions: DerivePluginOptions): {
-  root: string
-  watch: string[]
-  load: NonNullable<DerivePluginOptions['load']>
-  derive: DerivePluginOptions['derive']
-  gitignore: GitignoreMatcher | undefined
-  gitignoreEntries: string[]
-} {
+function createPrepareGitignore(
+  root: string,
+  gitignoreInput: DerivePluginOptions['gitignore'],
+  log: (message: string) => void
+): (result: EmitResult) => Promise<void> {
+  const normalizedGitignore = normalizeGitignore(gitignoreInput, { log })
+  const gitignore = normalizedGitignore?.matcher
+  const gitignoreEntries = normalizedGitignore?.entries || []
+  if (!gitignore && gitignoreEntries.length === 0) {
+    return async () => {}
+  }
+  return async (result: EmitResult) => {
+    const relPathsFromFiles = result.files
+      .filter((file): file is { path: string; content: string } => 'content' in file)
+      .map(file => toRelPath(root, file.path))
+      .filter(relPath => relPath && !relPath.startsWith('..'))
+    const matched = gitignore ? relPathsFromFiles.filter(relPath => gitignore(relPath)) : []
+    await ensureGitignoreEntries(root, [...gitignoreEntries, ...matched])
+  }
+}
+
+export function resolveOptions(userOptions: DerivePluginOptions): ResolvedDeriveOptions {
   if (typeof userOptions.derive !== 'function') {
     throw new Error('`derive` is required and must be a function.')
   }
   const root = normalizeRoot(userOptions.root)
   const watch = normalizeWatch(userOptions.watch, root)
   const verbose = normalizeVerbose(userOptions.verbose)
+  const deriveWhen = normalizeDeriveWhen(userOptions.deriveWhen)
   const log = createLogger(verbose)
   const load = createLoadResolver(userOptions.load, { root, log })
-  const normalizedGitignore = normalizeGitignore(userOptions.gitignore, { log })
-  const gitignore = normalizedGitignore?.matcher
-  const gitignoreEntries = normalizedGitignore?.entries || []
+  const prepareGitignore = createPrepareGitignore(root, userOptions.gitignore, log)
   const derive = createDeriveResolver(userOptions.derive, {
     root,
     watch,
     banner: userOptions.banner,
     log
   })
-  return { root, watch, load, derive, gitignore, gitignoreEntries }
+  return { root, watch, load, derive, prepareGitignore, deriveWhen }
 }
 

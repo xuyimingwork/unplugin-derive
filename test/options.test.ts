@@ -34,6 +34,23 @@ describe('resolveOptions', () => {
     ])
   })
 
+  it('should provide default deriveWhen values', () => {
+    const { deriveWhen } = resolveOptions({
+      watch: 'src/**/*.ts',
+      derive: async () => ({ files: [] })
+    })
+    expect(deriveWhen).toEqual({ buildStart: 'full', watchChange: 'patch' })
+  })
+
+  it('should keep deriveWhen none values when provided', () => {
+    const { deriveWhen } = resolveOptions({
+      watch: 'src/**/*.ts',
+      deriveWhen: { buildStart: 'none', watchChange: 'none' },
+      derive: async () => ({ files: [] })
+    })
+    expect(deriveWhen).toEqual({ buildStart: 'none', watchChange: 'none' })
+  })
+
   it('should map load path to relative path when using built-in loader', async () => {
     const root = await createTempRoot('derive-options')
     tempDirs.push(root)
@@ -44,7 +61,7 @@ describe('resolveOptions', () => {
 
     const userLoad = vi.fn(async (relPath: string) => {
       expect(relPath).toBe('src/input.txt')
-      return 'text'
+      return 'text' as const
     })
 
     const { load } = resolveOptions({
@@ -91,12 +108,29 @@ describe('resolveOptions', () => {
   })
 
   it('should treat string array gitignore as static entries', () => {
-    const { gitignore, gitignoreEntries } = resolveOptions({
+    const { prepareGitignore } = resolveOptions({
       watch: 'src/**/*.ts',
       gitignore: ['generated/api/types.d.ts', 'dist/output.txt'],
       derive: async () => ({ files: [] })
     })
-    expect(gitignore).toBeUndefined()
-    expect(gitignoreEntries).toEqual(['generated/api/types.d.ts', 'dist/output.txt'])
+    expect(typeof prepareGitignore).toBe('function')
+  })
+
+  it('should prepare gitignore entries from static and emitted files', async () => {
+    const root = await createTempRoot('derive-options-gitignore')
+    tempDirs.push(root)
+    const { prepareGitignore } = resolveOptions({
+      root,
+      watch: 'src/**/*.ts',
+      gitignore: ['generated/static.txt'],
+      derive: async () => ({ files: [] })
+    })
+    await prepareGitignore({
+      files: [
+        { path: path.join(root, 'generated/dynamic.txt'), content: 'x' }
+      ]
+    })
+    const content = await fs.promises.readFile(path.join(root, '.gitignore'), 'utf8')
+    expect(content).toBe('generated/static.txt\n')
   })
 })
