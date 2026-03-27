@@ -1,0 +1,18 @@
+{
+  "watch": "src/**/*.txt",
+  "loadByExtension": {
+    ".txt": "text"
+  },
+  "run": [
+    {
+      "type": "full"
+    }
+  ],
+  "deriveOutputs": [
+    {
+      "path": "event.json",
+      "from": "event-json"
+    }
+  ],
+  "snapshotDir": "generated"
+}

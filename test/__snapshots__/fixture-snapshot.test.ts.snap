@@ -1,0 +1,45 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`fixtures snapshots > should match snapshot when running fixture full-basic 1`] = `
+{
+  "event.json": "{
+  "type": "full",
+  "changes": [
+    {
+      "type": "unknown",
+      "path": "src/a.txt",
+      "content": "hello A\\n"
+    },
+    {
+      "type": "unknown",
+      "path": "src/nested/b.txt",
+      "content": "hello B\\n"
+    }
+  ]
+}",
+}
+`;
+
+exports[`fixtures snapshots > should match snapshot when running fixture patch-mixed 1`] = `
+{
+  "deleted-log.txt": "src/deleted.txt",
+  "event.json": "{
+  "type": "patch",
+  "changes": [
+    {
+      "type": "create",
+      "path": "src/created.txt"
+    },
+    {
+      "type": "delete",
+      "path": "src/deleted.txt"
+    },
+    {
+      "type": "update",
+      "path": "src/updated.txt",
+      "content": "after update"
+    }
+  ]
+}",
+}
+`;

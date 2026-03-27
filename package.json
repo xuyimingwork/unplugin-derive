@@ -41,6 +41,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "test": "vitest",
+    "test:run": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepublishOnly": "pnpm build && pnpm typecheck"
   },
@@ -53,7 +55,8 @@
     "@types/micromatch": "^4.0.10",
     "@types/node": "^22.13.10",
     "tsup": "^8.4.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.4"
   },
   "keywords": [],
   "author": "Xu Yiming",

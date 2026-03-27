@@ -1,0 +1,47 @@
+{
+  "watch": "src/**/*.txt",
+  "loadByExtension": {
+    ".txt": "text"
+  },
+  "mutateBeforeRun": [
+    {
+      "action": "write",
+      "path": "src/updated.txt",
+      "content": "after update"
+    },
+    {
+      "action": "delete",
+      "path": "src/deleted.txt"
+    }
+  ],
+  "run": [
+    {
+      "type": "patch",
+      "changes": [
+        {
+          "type": "update",
+          "path": "src/updated.txt"
+        },
+        {
+          "type": "delete",
+          "path": "src/deleted.txt"
+        },
+        {
+          "type": "create",
+          "path": "src/created.txt"
+        }
+      ]
+    }
+  ],
+  "deriveOutputs": [
+    {
+      "path": "event.json",
+      "from": "event-json"
+    },
+    {
+      "path": "deleted-log.txt",
+      "from": "deleted-paths"
+    }
+  ],
+  "snapshotDir": "generated"
+}
