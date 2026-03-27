@@ -17,12 +17,42 @@ export type DeriveEvent =
       changes: DeriveChange[]
     }
 
+export type BannerStyle = 'line-slash' | 'line-hash' | 'block-star' | 'block-jsdoc'
+
+export type BannerOverviewNode =
+  | string
+  | {
+      description?: string
+      items?: BannerOverviewNode[]
+    }
+
+export type BannerData = Record<string, unknown> & {
+  author?: string | string[]
+  source?: string | string[]
+  overview?: BannerOverviewNode
+}
+
+export type BannerRenderContext = {
+  path: string
+  content: string
+  data: BannerData
+  style: BannerStyle
+}
+
+export type BannerConfig = {
+  style?: BannerStyle
+  template?: string
+  formatter?: (context: BannerRenderContext) => string
+  data?: BannerData
+}
+
 export type EmitFile =
-  | { path: string; content: string }
-  | { path: string; type: 'delete' }
+  | { path: string; content: string; banner?: false | BannerConfig }
+  | { path: string; type: 'delete'; banner?: false | BannerConfig }
 
 export type EmitResult = {
   files: EmitFile[]
+  banner?: false | BannerConfig
 }
 
 export type BuiltinLoadType = 'text' | 'json' | 'buffer' | 'import'
@@ -35,6 +65,9 @@ export type LoadResult =
     }
 
 export type LoadResolver = (path: string) => LoadResult | Promise<LoadResult>
+
+export type GitignoreMatcher = (file: string) => boolean
+export type GitignoreOption = true | string | string[] | GitignoreMatcher
 
 export type DerivePluginOptions = {
   /**
@@ -57,5 +90,13 @@ export type DerivePluginOptions = {
    * 接收 full/patch 事件，返回要写入/删除的文件列表。
    */
   derive: (event: DeriveEvent) => EmitResult | Promise<EmitResult>
+  /**
+   * 全局 banner 配置，支持被 EmitResult / EmitFile 覆盖。
+   */
+  banner?: false | BannerConfig
+  /**
+   * 自动将输出文件加入 `root/.gitignore`。
+   */
+  gitignore?: GitignoreOption
 }
 

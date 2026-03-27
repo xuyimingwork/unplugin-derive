@@ -3,7 +3,8 @@ import micromatch from 'micromatch'
 import { PLUGIN_NAME } from './constants.js'
 import { isWithinRoot, normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path.js'
 import { applyBuiltinLoader } from './builtin-loader.js'
-import type { DerivePluginOptions, EmitResult, LoadResult } from '../types.js'
+import { mergeBanner } from './banner-merge.js'
+import type { DerivePluginOptions, EmitResult, GitignoreMatcher, LoadResult } from '../types.js'
 
 function normalizeRoot(rootInput: DerivePluginOptions['root']): string {
   return path.resolve(rootInput ?? process.cwd())
@@ -29,6 +30,43 @@ function normalizeVerbose(verboseInput: DerivePluginOptions['verbose']): boolean
 function createLogger(verbose: boolean): (message: string) => void {
   return message => {
     if (verbose) console.warn(`[${PLUGIN_NAME}] ${message}`)
+  }
+}
+
+function normalizeGitignore(
+  gitignoreInput: DerivePluginOptions['gitignore'],
+  {
+    log
+  }: {
+    log: (message: string) => void
+  }
+): {
+  matcher: GitignoreMatcher | undefined
+  entries: string[]
+} | undefined {
+  if (!gitignoreInput) return undefined
+  if (gitignoreInput === true) {
+    return { matcher: () => true, entries: [] }
+  }
+  if (typeof gitignoreInput === 'function') {
+    return {
+      matcher: file => {
+        try {
+          return gitignoreInput(file) === true
+        } catch (e: any) {
+          log(`gitignore matcher failed for ${file}: ${e?.message || e}`)
+          return false
+        }
+      },
+      entries: []
+    }
+  }
+  const entries = (Array.isArray(gitignoreInput) ? gitignoreInput : [gitignoreInput])
+    .map(v => normalizeSlashes(String(v).trim()))
+    .filter(Boolean)
+  return {
+    matcher: undefined,
+    entries
   }
 }
 
@@ -77,10 +115,12 @@ function createDeriveResolver(
   {
     root,
     watch,
+    banner,
     log,
   }: {
     root: string
     watch: string[]
+    banner: DerivePluginOptions['banner']
     log: (message: string) => void
   }
 ): DerivePluginOptions['derive'] {
@@ -114,7 +154,18 @@ function createDeriveResolver(
         }
         return true
       })
-    const normalizedResult: EmitResult = { ...result, files }
+    const resultBanner = mergeBanner(banner, result.banner)
+    const normalizedResult: EmitResult = {
+      ...result,
+      banner: resultBanner,
+      files: files.map(file => {
+        if (!('content' in file)) return file
+        return {
+          ...file,
+          banner: mergeBanner(resultBanner, file.banner)
+        }
+      })
+    }
     return normalizedResult
   }
 }
@@ -124,6 +175,8 @@ export function resolveOptions(userOptions: DerivePluginOptions): {
   watch: string[]
   load: NonNullable<DerivePluginOptions['load']>
   derive: DerivePluginOptions['derive']
+  gitignore: GitignoreMatcher | undefined
+  gitignoreEntries: string[]
 } {
   if (typeof userOptions.derive !== 'function') {
     throw new Error('`derive` is required and must be a function.')
@@ -133,7 +186,15 @@ export function resolveOptions(userOptions: DerivePluginOptions): {
   const verbose = normalizeVerbose(userOptions.verbose)
   const log = createLogger(verbose)
   const load = createLoadResolver(userOptions.load, { root, log })
-  const derive = createDeriveResolver(userOptions.derive, { root, watch, log })
-  return { root, watch, load, derive }
+  const normalizedGitignore = normalizeGitignore(userOptions.gitignore, { log })
+  const gitignore = normalizedGitignore?.matcher
+  const gitignoreEntries = normalizedGitignore?.entries || []
+  const derive = createDeriveResolver(userOptions.derive, {
+    root,
+    watch,
+    banner: userOptions.banner,
+    log
+  })
+  return { root, watch, load, derive, gitignore, gitignoreEntries }
 }
 

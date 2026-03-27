@@ -1,6 +1,8 @@
 import fg from 'fast-glob'
+import path from 'node:path'
 import { resolveOptions } from './options.js'
 import { emitResultFiles } from './emitter.js'
+import { ensureGitignoreEntries } from './gitignore.js'
 import { loadChangeContent } from './loader.js'
 import { normalizeIncomingAbsPath } from './path.js'
 import { createTaskQueue } from './queue.js'
@@ -34,7 +36,7 @@ function normalizePatchChanges(root: string, changes: DeriveChange[]): DeriveCha
 }
 
 export function createDeriveRuntime(userOptions: DerivePluginOptions): Runtime {
-  const { root, watch, load, derive } = resolveOptions(userOptions)
+  const { root, watch, load, derive, gitignore, gitignoreEntries } = resolveOptions(userOptions)
 
   async function executeTask(task: DeriveTask): Promise<void> {
     const changes = task.type === 'full'
@@ -53,6 +55,14 @@ export function createDeriveRuntime(userOptions: DerivePluginOptions): Runtime {
     )
     const event: DeriveEvent = { type: task.type, changes: loadedChanges }
     const result = await derive(event)
+    if (gitignore || gitignoreEntries.length) {
+      const relPathsFromFiles = result.files
+        .filter((file): file is { path: string; content: string } => 'content' in file)
+        .map(file => path.relative(root, file.path).replace(/\\/g, '/'))
+        .filter(relPath => relPath && !relPath.startsWith('..'))
+      const matched = gitignore ? relPathsFromFiles.filter(relPath => gitignore(relPath)) : []
+      await ensureGitignoreEntries(root, [...gitignoreEntries, ...matched])
+    }
     await emitResultFiles(result)
   }
   const queue = createTaskQueue(executeTask)

@@ -114,6 +114,11 @@ await build({
 - **load**: 可选内容加载器。返回 `undefined`（不加载）/`"text"`/`"json"`/`"buffer"`/`"import"`/`{ content }`
 - **derive**: 核心回调，签名 `derive(event: DeriveEvent)`，返回 `{ files }`
 - **verbose**: 输出运行日志（默认 `false`）
+- **banner**: 全局 banner 配置（可被 `EmitResult.banner` 和 `EmitFile.banner` 覆盖）
+- **gitignore**: 自动维护 `root/.gitignore`
+  - `true`: 将本次生成文件全部写入 `.gitignore`
+  - `string` / `string[]`: 直接作为 `.gitignore` 条目写入
+  - `(file) => boolean`: 按文件相对路径过滤后写入
 
 ### 事件和返回值
 
@@ -121,7 +126,38 @@ await build({
   - `type: "full" | "patch"`
   - `changes: Array<{ type, path, timestamp?, content? }>`
 - `EmitResult`
-  - `files: Array<{ path, content } | { path, type: "delete" }>`
+  - `files: Array<{ path, content, banner? } | { path, type: "delete", banner? }>`
+  - `banner?: false | BannerConfig`
+
+### Banner（可选）
+
+- 覆盖顺序：`DerivePluginOptions.banner` -> `EmitResult.banner` -> `EmitFile.banner`（后者覆盖前者）
+- `false` 也遵循同样规则，表示该层显式禁用
+- 渲染优先级：`formatter` > `template` > 默认模板（当 `data.author` 存在）
+- `style` 可选值：`line-slash` / `line-hash` / `block-star` / `block-jsdoc`
+
+示例（默认模板）：
+
+```ts
+Derive({
+  watch: ['src/**/*.ts'],
+  banner: {
+    data: {
+      author: 'team-a',
+      source: 'src/**/*.ts',
+      overview: {
+        description: 'generated stats',
+        items: ['files: 12', 'methods: 38']
+      }
+    }
+  },
+  async derive() {
+    return {
+      files: [{ path: 'src/generated.ts', content: 'export const x = 1\n' }]
+    }
+  }
+})
+```
 
 ### 队列语义
 

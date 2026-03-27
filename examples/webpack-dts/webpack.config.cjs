@@ -23,6 +23,7 @@ module.exports = {
         root: __dirname,
         verbose: true
       }),
+      gitignore: 'src/api/types.d.ts',
       verbose: true
     })
   ]

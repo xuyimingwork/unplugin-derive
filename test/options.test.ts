@@ -89,4 +89,14 @@ describe('resolveOptions', () => {
       { path: path.join(root, 'dist/result.txt'), content: 'ok' }
     ])
   })
+
+  it('should treat string array gitignore as static entries', () => {
+    const { gitignore, gitignoreEntries } = resolveOptions({
+      watch: 'src/**/*.ts',
+      gitignore: ['generated/api/types.d.ts', 'dist/output.txt'],
+      derive: async () => ({ files: [] })
+    })
+    expect(gitignore).toBeUndefined()
+    expect(gitignoreEntries).toEqual(['generated/api/types.d.ts', 'dist/output.txt'])
+  })
 })
