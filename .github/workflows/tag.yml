@@ -1,0 +1,60 @@
+name: Tag
+
+on:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Extract version and create tag
+        id: tag
+        run: |
+          # 扫描本次 push 中的提交标题，避免仅检查 HEAD 导致漏打 tag
+          BEFORE_SHA="${{ github.event.before }}"
+          AFTER_SHA="${{ github.sha }}"
+          ZERO_SHA="0000000000000000000000000000000000000000"
+          RANGE="$BEFORE_SHA..$AFTER_SHA"
+          if [[ "$BEFORE_SHA" == "$ZERO_SHA" ]]; then
+            RANGE="$AFTER_SHA"
+          fi
+
+          VERSION=""
+          while IFS= read -r SUBJECT; do
+            echo "Commit subject: $SUBJECT"
+            # 仅允许整行精确匹配：release: X.Y.Z 或 release: X.Y.Z-xxx
+            if [[ "$SUBJECT" =~ ^release:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?)$ ]]; then
+              VERSION="${BASH_REMATCH[1]}"
+              break
+            fi
+          done < <(git log --format=%s "$RANGE")
+
+          if [[ -n "$VERSION" ]]; then
+            TAG="v${VERSION}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "match=true" >> $GITHUB_OUTPUT
+          else
+            echo "match=false" >> $GITHUB_OUTPUT
+            echo "No release commit detected, skipping"
+          fi
+
+      - name: Create and push tag
+        if: steps.tag.outputs.match == 'true'
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" ${{ github.sha }} -m "release: ${{ steps.tag.outputs.version }}"
+          git push origin "$TAG"
