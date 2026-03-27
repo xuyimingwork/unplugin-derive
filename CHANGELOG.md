@@ -1,5 +1,20 @@
 # 更新日志
 
+## [0.2.0] - 2026-03-27
+
+### 新增
+
+- 新增 `deriveWhen` 配置，支持按阶段控制触发事件类型：
+  - `buildStart`: `full` | `none`
+  - `watchChange`: `patch` | `full` | `none`
+- 为 `watchChange: "full"` 增加 watch 范围过滤，仅当变更路径命中 `watch` 时触发 full。
+
+### 优化
+
+- 将 `resolveOptions` 前移到插件入口层，在 `index` 中完成配置解析后再创建 runtime。
+- 在 `resolveOptions` 中新增 `prepareGitignore`，并在 emit 前统一执行，不再向 runtime 暴露 `gitignore`/`gitignoreEntries` 细节。
+- 抽取并复用 `isPathWatched`，统一输入过滤与输出保护的匹配逻辑。
+
 ## [0.1.0] - 2026-03-27
 
 ### 新增

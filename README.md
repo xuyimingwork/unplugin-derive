@@ -119,6 +119,27 @@ await build({
   - `true`: 将本次生成文件全部写入 `.gitignore`
   - `string` / `string[]`: 直接作为 `.gitignore` 条目写入
   - `(file) => boolean`: 按文件相对路径过滤后写入
+- **deriveWhen**: 控制各阶段触发 `derive` 的事件类型
+  - `buildStart`: `full` | `none`（默认 `full`）
+  - `watchChange`: `patch` | `full` | `none`（默认 `patch`）
+  - 当 `watchChange: "full"` 时，仅在变更路径命中 `watch` 时触发 full
+
+示例：
+
+```ts
+Derive({
+  watch: ['src/api/**/*.js'],
+  deriveWhen: {
+    buildStart: 'full',
+    watchChange: 'full'
+  },
+  async derive(event) {
+    return {
+      files: [{ path: 'src/generated.txt', content: `event=${event.type}\n` }]
+    }
+  }
+})
+```
 
 ### 事件和返回值
 
