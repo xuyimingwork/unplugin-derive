@@ -11,8 +11,8 @@ export type DeriveTask =
     }
 
 type TaskQueueState = {
-  running: boolean
   tasks: DeriveTask[]
+  activeRun: Promise<void> | undefined
 }
 
 export type DeriveTaskWorker = (task: DeriveTask) => Promise<void>
@@ -22,8 +22,8 @@ export type DeriveTaskQueue = {
 
 function createTaskQueueState(): TaskQueueState {
   return {
-    running: false,
-    tasks: []
+    tasks: [],
+    activeRun: undefined
   }
 }
 
@@ -75,17 +75,20 @@ function enqueueTask(state: TaskQueueState, task: DeriveTask): void {
 }
 
 async function runPendingTasks(state: TaskQueueState, worker: DeriveTaskWorker): Promise<void> {
-  if (state.running) return
-  state.running = true
-  try {
-    while (state.tasks.length > 0) {
-      const nextTask = state.tasks.shift()
-      if (!nextTask) continue
-      await worker(nextTask)
-    }
-  } finally {
-    state.running = false
+  if (!state.activeRun) {
+    state.activeRun = (async () => {
+      try {
+        while (state.tasks.length > 0) {
+          const nextTask = state.tasks.shift()
+          if (!nextTask) continue
+          await worker(nextTask)
+        }
+      } finally {
+        state.activeRun = undefined
+      }
+    })()
   }
+  await state.activeRun
 }
 
 export function createTaskQueue(worker: DeriveTaskWorker): DeriveTaskQueue {

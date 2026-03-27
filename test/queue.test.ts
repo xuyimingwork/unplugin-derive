@@ -42,6 +42,37 @@ describe('createTaskQueue', () => {
     ])
   })
 
+  it('should keep later schedule pending until queued task is finished', async () => {
+    let resumeFirst = () => {}
+    const firstDone = new Promise<void>(resolve => {
+      resumeFirst = resolve
+    })
+    const worker = vi.fn(async () => {
+      await firstDone
+    })
+    const queue = createTaskQueue(worker)
+
+    const first = queue.schedule({
+      type: 'patch',
+      changes: [{ type: 'create', path: '/a.ts' }]
+    })
+    const second = queue.schedule({
+      type: 'patch',
+      changes: [{ type: 'update', path: '/b.ts' }]
+    })
+
+    let secondResolved = false
+    second.then(() => {
+      secondResolved = true
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(secondResolved).toBe(false)
+
+    resumeFirst()
+    await Promise.all([first, second])
+  })
+
   it('should prioritize full task when patch tasks are pending', async () => {
     const calls: DeriveTask[] = []
     let resumeFirst = () => {}
