@@ -1,22 +1,22 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-export function writeIfChanged(outputPath: string, content: string): boolean {
+export async function writeIfChanged(outputPath: string, content: string): Promise<boolean> {
   let prev = ''
   try {
-    prev = fs.readFileSync(outputPath, 'utf8')
+    prev = await fs.promises.readFile(outputPath, 'utf8')
   } catch (e: any) {
     if (e?.code !== 'ENOENT') throw e
   }
   if (prev === content) return false
-  fs.mkdirSync(path.dirname(outputPath), { recursive: true })
-  fs.writeFileSync(outputPath, content, 'utf8')
+  await fs.promises.mkdir(path.dirname(outputPath), { recursive: true })
+  await fs.promises.writeFile(outputPath, content, 'utf8')
   return true
 }
 
-export function removeIfExists(targetPath: string): boolean {
+export async function removeIfExists(targetPath: string): Promise<boolean> {
   try {
-    fs.unlinkSync(targetPath)
+    await fs.promises.unlink(targetPath)
     return true
   } catch (e: any) {
     if (e?.code === 'ENOENT') return false

@@ -8,9 +8,9 @@ export async function emitResultFiles(
   for (const file of files) {
     const absPath = file.path
     if ('type' in file && file.type === 'delete') {
-      removeIfExists(absPath)
+      await removeIfExists(absPath)
     } else if ('content' in file) {
-      writeIfChanged(absPath, file.content)
+      await writeIfChanged(absPath, file.content)
     }
   }
 }

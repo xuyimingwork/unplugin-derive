@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "frontend-code-review": {
+      "source": "langgenius/dify",
+      "sourceType": "github",
+      "computedHash": "79fa87cd5460c80dc842153155b26bd4a3cad9858475c2e1ee50cab6dcd1fbbe"
+    }
+  }
+}

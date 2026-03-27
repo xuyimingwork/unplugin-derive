@@ -11,10 +11,15 @@ function normalizeRoot(rootInput: DerivePluginOptions['root']): string {
 
 function normalizeWatch(watchInput: DerivePluginOptions['watch'], root: string): string[] {
   const watchRel = (Array.isArray(watchInput) ? watchInput : [watchInput])
-    .map(v => normalizeRelPath(String(v)))
+    .map(v => String(v).trim())
     .filter(Boolean)
   if (!watchRel.length) throw new Error('`watch` must contain at least one non-empty pattern.')
-  return watchRel.map(pattern => normalizeSlashes(path.resolve(root, pattern)))
+  return watchRel.map(pattern => {
+    const isNegated = pattern.startsWith('!')
+    const rawPattern = isNegated ? pattern.slice(1) : pattern
+    const normalizedPattern = normalizeSlashes(path.resolve(root, normalizeRelPath(rawPattern)))
+    return isNegated ? `!${normalizedPattern}` : normalizedPattern
+  })
 }
 
 function normalizeVerbose(verboseInput: DerivePluginOptions['verbose']): boolean {
@@ -88,6 +93,9 @@ function createDeriveResolver(
       }))
     }
     const result = await userDerive(userEvent)
+    if (!result || typeof result !== 'object') {
+      throw new Error('`derive` must return an object with `files` array.')
+    }
     const files = (Array.isArray(result.files) ? result.files : [])
       .map(file => ({
         ...file,
