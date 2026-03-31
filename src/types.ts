@@ -57,12 +57,19 @@ export type EmitResult = {
 
 export type BuiltinLoadType = 'text' | 'json' | 'buffer' | 'import'
 
+export type LoadContentResult = {
+  content: unknown
+}
+
+export type LoadContentFactory = () => LoadContentResult | undefined | Promise<LoadContentResult | undefined>
+
+export type LoadMethod = BuiltinLoadType | LoadContentFactory
+
 export type LoadResult =
   | undefined
   | BuiltinLoadType
-  | {
-      content: unknown
-    }
+  | LoadMethod[]
+  | LoadContentResult
 
 export type LoadResolver = (path: string) => LoadResult | Promise<LoadResult>
 

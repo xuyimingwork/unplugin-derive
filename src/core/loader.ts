@@ -12,6 +12,6 @@ export async function loadChangeContent(
     timestamp
   }
   const result = await load(absPath)
-  if (!result || typeof result === 'string') return baseChange
+  if (!result || typeof result !== 'object' || !('content' in result)) return baseChange
   return { ...baseChange, content: result.content }
 }

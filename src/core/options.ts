@@ -4,7 +4,7 @@ import { ensureGitignoreEntries } from './gitignore.js'
 import { isPathWatched, isWithinRoot, normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path.js'
 import { applyBuiltinLoader } from './builtin-loader.js'
 import { mergeBanner } from './banner-merge.js'
-import type { DeriveBuildStartType, DerivePluginOptions, DeriveWatchChangeType, EmitResult, GitignoreMatcher, LoadResult } from '../types.js'
+import type { DeriveBuildStartType, DerivePluginOptions, DeriveWatchChangeType, EmitResult, GitignoreMatcher, LoadMethod, LoadResult } from '../types.js'
 
 export type DeriveWhenResolved = {
   buildStart: DeriveBuildStartType
@@ -104,6 +104,43 @@ function createLoadResolver(
   if (!userLoad) {
     return async () => undefined
   }
+  async function tryLoadMethod(absPath: string, method: LoadMethod): Promise<{ content: unknown } | undefined> {
+    const runMethod = typeof method === 'function'
+      ? method
+      : async () => {
+          const content = await applyBuiltinLoader(absPath, method)
+          return { content }
+        }
+    try {
+      const loaded = await runMethod()
+      if (loaded && typeof loaded === 'object' && 'content' in loaded) return loaded
+    } catch (e: any) {
+      if (typeof method === 'function') {
+        log(`custom load factory failed for ${absPath}: ${e?.message || e}`)
+      } else if (e?.code !== 'ENOENT') {
+        log(`built-in load(${method}) failed for ${absPath}: ${e?.message || e}`)
+      }
+    }
+    return undefined
+  }
+  async function resolveLoadResult(absPath: string, result: LoadResult): Promise<{ content: unknown } | undefined> {
+    if (result == null) return undefined
+    if (typeof result === 'object' && !Array.isArray(result)) {
+      if ('content' in result) return result
+      log(`load result for ${absPath} is object without content field`)
+      return undefined
+    }
+    if (typeof result === 'function') {
+      log(`load result for ${absPath} is function; use array form to provide custom factory`)
+      return undefined
+    }
+    const methods = Array.isArray(result) ? result : [result]
+    for (const method of methods) {
+      const loaded = await tryLoadMethod(absPath, method)
+      if (loaded) return loaded
+    }
+    return undefined
+  }
   return async absPath => {
     let result: LoadResult
     try {
@@ -112,17 +149,7 @@ function createLoadResolver(
       log(`load failed for ${absPath}: ${e?.message || e}`)
       return undefined
     }
-    if (result == null) return undefined
-    if (typeof result === 'string') {
-      try {
-        const content = await applyBuiltinLoader(absPath, result)
-        return { content }
-      } catch (e: any) {
-        if (e?.code !== 'ENOENT') log(`built-in load(${result}) failed for ${absPath}: ${e?.message || e}`)
-        return undefined
-      }
-    }
-    return result
+    return await resolveLoadResult(absPath, result)
   }
 }
 

@@ -111,7 +111,7 @@ await build({
 
 - **root**: 工程根目录（默认 `process.cwd()`）
 - **watch**: 监听文件 glob（相对 `root`）
-- **load**: 可选内容加载器。返回 `undefined`（不加载）/`"text"`/`"json"`/`"buffer"`/`"import"`/`{ content }`
+- **load**: 可选内容加载器，详见下方「Load 策略」
 - **derive**: 核心回调，签名 `derive(event: DeriveEvent)`，返回 `{ files }`
 - **verbose**: 输出运行日志（默认 `false`）
 - **banner**: 全局 banner 配置（可被 `EmitResult.banner` 和 `EmitFile.banner` 覆盖）
@@ -124,11 +124,28 @@ await build({
   - `watchChange`: `patch` | `full` | `none`（默认 `patch`）
   - 当 `watchChange: "full"` 时，仅在变更路径命中 `watch` 时触发 full
 
-示例：
+### Load 策略
+
+`load(file)` 可以返回以下几种形式：
+
+- `undefined`：跳过加载，事件中该文件不带 `content`
+- `"text"` / `"json"` / `"buffer"` / `"import"`：使用内置加载方式
+- `Array<LoadMethod>`：按顺序尝试，命中即停止（数组项支持 `() => ({ content })` 自定义工厂）
+- `{ content }`：直接提供内容
+
+其中 `LoadMethod` 可理解为：内置 loader 或自定义工厂。  
+注意：非数组场景不支持直接返回函数工厂（即不支持 `load: () => () => ({ content })`）。
+
+示例（按顺序 fallback + 自定义工厂）：
 
 ```ts
 Derive({
   watch: ['src/api/**/*.js'],
+  load(file) {
+    if (file.endsWith('.json')) return ['json', 'text']
+    if (file.endsWith('.js')) return ['import', () => ({ content: { raw: 'from custom loader' } })]
+    return undefined
+  },
   deriveWhen: {
     buildStart: 'full',
     watchChange: 'full'
@@ -136,6 +153,23 @@ Derive({
   async derive(event) {
     return {
       files: [{ path: 'src/generated.txt', content: `event=${event.type}\n` }]
+    }
+  }
+})
+```
+
+简化示例（直接返回内容）：
+
+```ts
+Derive({
+  watch: ['src/**/*.md'],
+  load(file) {
+    if (!file.endsWith('.md')) return undefined
+    return { content: '# virtual markdown' }
+  },
+  async derive(event) {
+    return {
+      files: [{ path: 'src/generated.txt', content: String(event.changes[0]?.content ?? '') }]
     }
   }
 })

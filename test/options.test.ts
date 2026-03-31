@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resolveOptions } from '../src/core/options.ts'
+import type { BuiltinLoadType } from '../src/types.ts'
 import { createTempRoot, removeDir } from './utils.ts'
 
 const tempDirs: string[] = []
@@ -73,6 +74,116 @@ describe('resolveOptions', () => {
 
     const result = await load(sourceFile)
     expect(result).toEqual({ content: 'hello' })
+  })
+
+  it('should try load methods in order when load returns array', async () => {
+    const root = await createTempRoot('derive-options-load-array')
+    tempDirs.push(root)
+
+    const sourceFile = path.join(root, 'src/input.txt')
+    await fs.promises.mkdir(path.dirname(sourceFile), { recursive: true })
+    await fs.promises.writeFile(sourceFile, 'fallback-content', 'utf8')
+
+    const userLoad = vi.fn(async () => ['json', 'text'] as BuiltinLoadType[])
+
+    const { load } = resolveOptions({
+      root,
+      watch: 'src/**/*.txt',
+      load: userLoad,
+      derive: async () => ({ files: [] })
+    })
+
+    const result = await load(sourceFile)
+    expect(result).toEqual({ content: 'fallback-content' })
+  })
+
+  it('should support load factory in array form', async () => {
+    const root = await createTempRoot('derive-options-load-factory')
+    tempDirs.push(root)
+
+    const sourceFile = path.join(root, 'src/input.ts')
+    await fs.promises.mkdir(path.dirname(sourceFile), { recursive: true })
+    await fs.promises.writeFile(sourceFile, 'export const x = 1', 'utf8')
+
+    const userLoad = vi.fn(async () => [() => ({ content: { fromFactory: true } })])
+
+    const { load } = resolveOptions({
+      root,
+      watch: 'src/**/*.ts',
+      load: userLoad,
+      derive: async () => ({ files: [] })
+    })
+
+    const result = await load(sourceFile)
+    expect(result).toEqual({ content: { fromFactory: true } })
+  })
+
+  it('should continue to next load method when previous factory throws', async () => {
+    const root = await createTempRoot('derive-options-load-array-fallback-on-error')
+    tempDirs.push(root)
+
+    const sourceFile = path.join(root, 'src/input.txt')
+    await fs.promises.mkdir(path.dirname(sourceFile), { recursive: true })
+    await fs.promises.writeFile(sourceFile, 'fallback-content', 'utf8')
+
+    const userLoad = vi.fn(async () => [
+      () => {
+        throw new Error('factory failed')
+      },
+      'text' as const
+    ])
+
+    const { load } = resolveOptions({
+      root,
+      watch: 'src/**/*.txt',
+      load: userLoad,
+      derive: async () => ({ files: [] })
+    })
+
+    const result = await load(sourceFile)
+    expect(result).toEqual({ content: 'fallback-content' })
+  })
+
+  it('should ignore non-array load factory return value', async () => {
+    const root = await createTempRoot('derive-options-load-factory-unsupported')
+    tempDirs.push(root)
+
+    const sourceFile = path.join(root, 'src/input.ts')
+    await fs.promises.mkdir(path.dirname(sourceFile), { recursive: true })
+    await fs.promises.writeFile(sourceFile, 'export const x = 1', 'utf8')
+
+    const userLoad = vi.fn(async () => (() => ({ content: { fromFactory: true } })) as any)
+
+    const { load } = resolveOptions({
+      root,
+      watch: 'src/**/*.ts',
+      load: userLoad,
+      derive: async () => ({ files: [] })
+    })
+
+    const result = await load(sourceFile)
+    expect(result).toBeUndefined()
+  })
+
+  it('should ignore object load result without content field', async () => {
+    const root = await createTempRoot('derive-options-load-invalid-object')
+    tempDirs.push(root)
+
+    const sourceFile = path.join(root, 'src/input.ts')
+    await fs.promises.mkdir(path.dirname(sourceFile), { recursive: true })
+    await fs.promises.writeFile(sourceFile, 'export const x = 1', 'utf8')
+
+    const userLoad = vi.fn(async () => ({ foo: 'bar' } as any))
+
+    const { load } = resolveOptions({
+      root,
+      watch: 'src/**/*.ts',
+      load: userLoad,
+      derive: async () => ({ files: [] })
+    })
+
+    const result = await load(sourceFile)
+    expect(result).toBeUndefined()
   })
 
   it('should normalize derive paths when output files include invalid targets', async () => {
