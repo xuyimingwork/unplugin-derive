@@ -1,6 +1,6 @@
 {
   "name": "unplugin-derive",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Generate derived artifacts from your project files with a flexible, unplugin-based abstraction.",
   "type": "module",
   "sideEffects": false,
