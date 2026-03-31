@@ -23,15 +23,26 @@ export const unpluginDerive = createUnplugin<DerivePluginOptions | undefined>(
       watchChange(id: string, change?: { event?: string }) {
         if (options.deriveWhen.watchChange === 'none') return
         const absPath = normalizeIncomingAbsPath(options.root, id)
-        if (!absPath || !isPathWatched(absPath, options.watch)) return
+        if (!absPath) {
+          options.log(`skip watchChange (invalid path): ${id}`)
+          return
+        }
+        if (!isPathWatched(absPath, options.watch)) {
+          options.log(`skip watchChange (not watched): ${id}`)
+          return
+        }
         if (options.deriveWhen.watchChange === 'full') {
           return runtime.run({ type: 'full', changes: [] })
+        }
+        const changeType = mapWatchEventType(change?.event)
+        if (changeType === 'unknown') {
+          options.log(`watchChange event mapped to unknown: ${String(change?.event)}`)
         }
         return runtime.run({
           type: 'patch',
           changes: [
             {
-              type: mapWatchEventType(change?.event),
+              type: changeType,
               path: id
             }
           ]

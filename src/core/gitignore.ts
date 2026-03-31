@@ -20,9 +20,9 @@ function hasEntry(content: string, relPosix: string): boolean {
 export async function ensureGitignoreEntries(
   root: string,
   relPaths: string[]
-): Promise<void> {
+): Promise<{ requested: number; appended: string[] }> {
   const unique = [...new Set(relPaths.map(normalizeEntry).filter(Boolean))]
-  if (!unique.length) return
+  if (!unique.length) return { requested: 0, appended: [] }
   const gitignorePath = path.join(root, '.gitignore')
   let content = ''
   try {
@@ -31,7 +31,8 @@ export async function ensureGitignoreEntries(
     if (e?.code !== 'ENOENT') throw e
   }
   const missing = unique.filter(rel => !hasEntry(content, rel))
-  if (!missing.length) return
+  if (!missing.length) return { requested: unique.length, appended: [] }
   const prefix = content && !/\n$/.test(content) ? '\n' : ''
   await fs.promises.appendFile(gitignorePath, `${prefix}${missing.join('\n')}\n`, 'utf8')
+  return { requested: unique.length, appended: missing }
 }

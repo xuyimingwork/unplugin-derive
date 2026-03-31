@@ -34,27 +34,45 @@ function normalizePatchChanges(root: string, changes: DeriveChange[]): DeriveCha
 }
 
 export function createDeriveRuntime(options: ResolvedDeriveOptions): Runtime {
-  const { root, watch, load, derive, prepareGitignore } = options
+  const { root, watch, log, load, derive, prepareGitignore } = options
 
   async function executeTask(task: DeriveTask): Promise<void> {
-    const changes = task.type === 'full'
-      ? await getFullChanges(task.watches)
-      : task.changes
-    if (task.type === 'patch' && changes.length === 0) return
-    const loadedChanges = await Promise.all(
-      changes.map(change =>
-        loadChangeContent(
-          change.path,
-          change.type,
-          change.timestamp,
-          load
+    const startedAt = Date.now()
+    let stage = 'resolve changes'
+    try {
+      const changes = task.type === 'full'
+        ? await getFullChanges(task.watches)
+        : task.changes
+      if (task.type === 'patch' && changes.length === 0) {
+        log('skip derive task (patch has no changes)')
+        return
+      }
+      log(`start derive task (${task.type}, changes=${changes.length})`)
+      stage = 'load content'
+      const loadedChanges = await Promise.all(
+        changes.map(change =>
+          loadChangeContent(
+            change.path,
+            change.type,
+            change.timestamp,
+            load
+          )
         )
       )
-    )
-    const event: DeriveEvent = { type: task.type, changes: loadedChanges }
-    const result = await derive(event)
-    await prepareGitignore(result)
-    await emitResultFiles(result)
+      const event: DeriveEvent = { type: task.type, changes: loadedChanges }
+      stage = 'derive'
+      const result = await derive(event)
+      stage = 'prepare gitignore'
+      await prepareGitignore(result)
+      stage = 'emit files'
+      const summary = await emitResultFiles(result)
+      const elapsed = Date.now() - startedAt
+      log(`done derive task (${task.type}) written=${summary.written}, deleted=${summary.deleted}, skipped=${summary.skipped}, duration=${elapsed}ms`)
+    } catch (e: any) {
+      const elapsed = Date.now() - startedAt
+      log(`derive task failed at ${stage} (${task.type}, duration=${elapsed}ms): ${e?.message || e}`)
+      throw e
+    }
   }
   const queue = createTaskQueue(executeTask)
 

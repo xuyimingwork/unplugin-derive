@@ -14,6 +14,7 @@ export type DeriveWhenResolved = {
 export type ResolvedDeriveOptions = {
   root: string
   watch: string[]
+  log: (message: string) => void
   load: NonNullable<DerivePluginOptions['load']>
   derive: DerivePluginOptions['derive']
   prepareGitignore: (result: EmitResult) => Promise<void>
@@ -230,7 +231,17 @@ function createPrepareGitignore(
       .map(file => toRelPath(root, file.path))
       .filter(relPath => relPath && !relPath.startsWith('..'))
     const matched = gitignore ? relPathsFromFiles.filter(relPath => gitignore(relPath)) : []
-    await ensureGitignoreEntries(root, [...gitignoreEntries, ...matched])
+    const entries = [...gitignoreEntries, ...matched]
+    if (entries.length === 0) {
+      log('skip .gitignore update (no matched entries)')
+      return
+    }
+    const summary = await ensureGitignoreEntries(root, entries)
+    if (summary.appended.length === 0) {
+      log(`skip .gitignore update (already present, checked ${summary.requested} entries)`)
+      return
+    }
+    log(`updated .gitignore entries (${summary.appended.length}/${summary.requested})`)
   }
 }
 
@@ -251,6 +262,6 @@ export function resolveOptions(userOptions: DerivePluginOptions): ResolvedDerive
     banner: userOptions.banner,
     log
   })
-  return { root, watch, load, derive, prepareGitignore, deriveWhen }
+  return { root, watch, log, load, derive, prepareGitignore, deriveWhen }
 }
 
