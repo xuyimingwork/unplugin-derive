@@ -32,5 +32,5 @@ export function isWithinRoot(root: string, absPath: string): boolean {
 
 export function isPathWatched(path: string, watches: string[]): boolean {
   const normalized = normalizeSlashes(path)
-  return watches.some(pattern => micromatch.isMatch(normalized, pattern))
+  return micromatch([normalized], watches).length > 0
 }

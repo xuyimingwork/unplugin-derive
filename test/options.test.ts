@@ -34,6 +34,31 @@ describe('resolveOptions', () => {
     ])
   })
 
+  it('should keep negated watch paths writable in derive output filtering', async () => {
+    const root = await createTempRoot('derive-watch-negation')
+    tempDirs.push(root)
+
+    const { derive } = resolveOptions({
+      root,
+      watch: ['src/api/**/*.js', '!src/api/index.js'],
+      derive: async () => ({
+        files: [
+          { path: 'src/api/user.js', content: 'skip me' },
+          { path: 'src/api/index.js', content: 'keep me' }
+        ]
+      })
+    })
+
+    const result = await derive({
+      type: 'patch',
+      changes: [{ type: 'update', path: path.join(root, 'src/api/user.js') }]
+    })
+
+    expect(result.files).toEqual([
+      { path: path.join(root, 'src/api/index.js'), content: 'keep me' }
+    ])
+  })
+
   it('should provide default deriveWhen values', () => {
     const { deriveWhen } = resolveOptions({
       watch: 'src/**/*.ts',

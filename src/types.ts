@@ -68,11 +68,10 @@ export type BuiltinLoadType = LegacyBuiltinLoadType
 export type DeriveLoaderBase = (path: string) => Promisable<DeriveLoaderResult>
 export type DeriveLoader = DeriveLoaderBase | DeriveLoaderBuiltin
 export type DeriveLoadRouter = (path: string) => Promisable<DeriveLoaderBuiltin | DeriveLoader[]>
-export type DeriveLoadOption = DeriveLoader | DeriveLoader[] | DeriveLoadRouter
-export type ResolvedLoad = (path: string) => Promise<DeriveLoaderResult>
+export type DeriveOptionLoad = DeriveLoader | DeriveLoader[] | DeriveLoadRouter
+export type DeriveOptionLoadResolved = (path: string) => Promise<DeriveLoaderResult>
 
 // Backward-compatible aliases used by internal runtime.
-export type LoadResolver = ResolvedLoad
 export type LoadContentResult = Exclude<DeriveLoaderResult, undefined>
 export type LoadContentFactory = DeriveLoaderBase
 export type LoadMethod = DeriveLoader | LegacyBuiltinLoadType
@@ -103,7 +102,7 @@ export type DerivePluginOptions = {
   /**
    * 根据文件路径决定是否加载内容，并如何加载。
    */
-  load?: DeriveLoadOption
+  load?: DeriveOptionLoad
   /**
    * 接收 full/patch 事件，返回要写入/删除的文件列表。
    */

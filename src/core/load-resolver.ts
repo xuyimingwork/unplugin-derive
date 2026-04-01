@@ -2,12 +2,12 @@ import fs from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { toRelPath } from './path.js'
 import type {
-  DeriveLoadOption,
+  DeriveOptionLoad,
   DeriveLoader,
   DeriveLoaderBase,
   DeriveLoaderBuiltin,
   DeriveLoaderResult,
-  ResolvedLoad,
+  DeriveOptionLoadResolved,
 } from '../types.js'
 
 const LEGACY_BUILTIN_LOADER_NAMES = ['text', 'json', 'buffer', 'import'] as const
@@ -48,6 +48,18 @@ function toDeriveLoaderBase(
   return path => loader(toRelPath(root, path))
 }
 
+function toDeriveLoaderBases(
+  rawLoaders: unknown,
+  context: {
+    root: string
+    log: (message: string) => void
+  }
+): DeriveLoaderBase[] | undefined {
+  return (Array.isArray(rawLoaders) ? rawLoaders : [rawLoaders]).map(loader =>
+    toDeriveLoaderBase(loader as DeriveLoader, context)
+  )
+}
+
 function createDeriveLoad(
   loaders?: DeriveLoaderBase[],
   log: (message: string) => void = () => {}
@@ -61,7 +73,9 @@ function createDeriveLoad(
         const result = await loader(path)
         // undefined 表示 loader 无法处理，交由下一个 loader 处理
         if (isObjectWithContent(result)) return result
-      } catch (e: any) {}
+      } catch (e: any) {
+        log(`load try failed for ${path}: ${e?.message || e}`)
+      }
     }
     // 所有加载器尝试完毕，无法加载
     log(`load failed for ${path}`)
@@ -69,20 +83,8 @@ function createDeriveLoad(
   }
 }
 
-function toDeriveLoaderBases(
-  rawLoaders: unknown,
-  context: {
-    root: string
-    log: (message: string) => void
-  }
-): DeriveLoaderBase[] | undefined {
-  return (Array.isArray(rawLoaders) ? rawLoaders : [rawLoaders]).map(loader =>
-    toDeriveLoaderBase(loader as DeriveLoader, context)
-  )
-}
-
 export function createLoadResolver(
-  load: DeriveLoadOption | undefined,
+  load: DeriveOptionLoad | undefined,
   {
     root,
     log,
@@ -90,21 +92,22 @@ export function createLoadResolver(
     root: string
     log: (message: string) => void
   }
-): ResolvedLoad {
+): DeriveOptionLoadResolved {
   if (!load) return createDeriveLoad()
 
   if (typeof load !== 'function') return createDeriveLoad(toDeriveLoaderBases(load, { root, log }), log)
   
   return async path => {
+    let raw
     try {
-      const raw = await toDeriveLoaderBase(load as any, { root })(path)
+      raw = await toDeriveLoaderBase(load as any, { root })(path)
       // 如果是普通加载器
       if (isDeriveLoaderResult(raw)) return raw
-      // 如果是路由
-      return await createDeriveLoad(toDeriveLoaderBases(raw, { root, log }), log)(path)
     } catch (e: any) {
       log(`load failed for ${path}: ${e?.message || e}`)
       return undefined
     }
+    // 如果是路由
+    return await createDeriveLoad(toDeriveLoaderBases(raw, { root, log }), log)(path)
   }
 }

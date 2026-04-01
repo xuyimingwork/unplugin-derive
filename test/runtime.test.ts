@@ -49,6 +49,38 @@ describe('createDeriveRuntime', () => {
     })
   })
 
+  it('should exclude negated watch files when full build collects changes', async () => {
+    const root = await createTempRoot('derive-runtime-full-negation')
+    tempDirs.push(root)
+
+    const includedFile = path.join(root, 'src/api/user.js')
+    const excludedFile = path.join(root, 'src/api/index.js')
+    await fs.promises.mkdir(path.dirname(includedFile), { recursive: true })
+    await fs.promises.writeFile(includedFile, 'export const user = 1', 'utf8')
+    await fs.promises.writeFile(excludedFile, 'export const index = 1', 'utf8')
+
+    const runtime = createDeriveRuntime(resolveOptions({
+      root,
+      watch: ['src/api/**/*.js', '!src/api/index.js'],
+      load: async () => '_text' as const,
+      derive: async event => ({
+        files: [
+          {
+            path: 'generated/full-negation.json',
+            content: JSON.stringify(event)
+          }
+        ]
+      })
+    }))
+
+    await runtime.run({ type: 'full', changes: [] })
+
+    const output = await fs.promises.readFile(path.join(root, 'generated/full-negation.json'), 'utf8')
+    const event = JSON.parse(output) as { changes: Array<{ path: string }> }
+    const paths = event.changes.map(change => change.path).sort()
+    expect(paths).toEqual(['src/api/user.js'])
+  })
+
   it('should drop changes outside root when patch paths are normalized', async () => {
     const root = await createTempRoot('derive-runtime-patch')
     tempDirs.push(root)
