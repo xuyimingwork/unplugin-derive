@@ -43,7 +43,8 @@ describe('createDeriveRuntime', () => {
         {
           type: 'unknown',
           path: 'src/foo.txt',
-          content: 'foo-content'
+          content: 'foo-content',
+          loader: '_text'
         }
       ]
     })
@@ -118,7 +119,8 @@ describe('createDeriveRuntime', () => {
         {
           type: 'update',
           path: 'src/bar.txt',
-          content: 'bar-content'
+          content: 'bar-content',
+          loader: '_text'
         }
       ]
     })

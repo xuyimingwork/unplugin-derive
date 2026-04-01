@@ -8,12 +8,14 @@ exports[`fixtures snapshots > should match snapshot when running fixture full-ba
     {
       "type": "unknown",
       "path": "src/a.txt",
-      "content": "hello A\\n"
+      "content": "hello A\\n",
+      "loader": "_text"
     },
     {
       "type": "unknown",
       "path": "src/nested/b.txt",
-      "content": "hello B\\n"
+      "content": "hello B\\n",
+      "loader": "_text"
     }
   ]
 }",
@@ -37,7 +39,8 @@ exports[`fixtures snapshots > should match snapshot when running fixture patch-m
     {
       "type": "update",
       "path": "src/updated.txt",
-      "content": "after update"
+      "content": "after update",
+      "loader": "_text"
     }
   ]
 }",

@@ -92,12 +92,12 @@ describe('resolveOptions', () => {
     const { load } = resolveOptions({
       root,
       watch: 'src/**/*.txt',
-      load: userLoad,
+      load: userLoad as any,
       derive: async () => ({ files: [] })
     })
 
     const result = await load(sourceFile)
-    expect(result).toEqual({ content: 'hello' })
+    expect(result).toEqual({ content: 'hello', loader: '_text' })
   })
 
   it('should try load methods in order when load returns array', async () => {
@@ -113,12 +113,12 @@ describe('resolveOptions', () => {
     const { load } = resolveOptions({
       root,
       watch: 'src/**/*.txt',
-      load: userLoad,
+      load: userLoad as any,
       derive: async () => ({ files: [] })
     })
 
     const result = await load(sourceFile)
-    expect(result).toEqual({ content: 'fallback-content' })
+    expect(result).toEqual({ content: 'fallback-content', loader: '_text' })
   })
 
   it('should support load factory in array form', async () => {
@@ -165,7 +165,7 @@ describe('resolveOptions', () => {
     })
 
     const result = await load(sourceFile)
-    expect(result).toEqual({ content: 'fallback-content' })
+    expect(result).toEqual({ content: 'fallback-content', loader: '_text' })
   })
 
   it('should treat top-level load factory return value as single custom loader', async () => {
@@ -225,7 +225,7 @@ describe('resolveOptions', () => {
     })
 
     const result = await load(sourceFile)
-    expect(result).toEqual({ content: 'hello-fixed' })
+    expect(result).toEqual({ content: 'hello-fixed', loader: '_text' })
   })
 
   it('should support fixed load chain shorthand', async () => {
@@ -244,7 +244,7 @@ describe('resolveOptions', () => {
     })
 
     const result = await load(sourceFile)
-    expect(result).toEqual({ content: 'hello-chain' })
+    expect(result).toEqual({ content: 'hello-chain', loader: '_text' })
   })
 
   it('should support legacy built-in names at runtime', async () => {
@@ -263,7 +263,7 @@ describe('resolveOptions', () => {
     })
 
     const result = await load(sourceFile)
-    expect(result).toEqual({ content: 'legacy-ok' })
+    expect(result).toEqual({ content: 'legacy-ok', loader: '_text' })
   })
 
   it('should normalize derive paths when output files include invalid targets', async () => {

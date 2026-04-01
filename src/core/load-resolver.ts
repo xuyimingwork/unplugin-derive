@@ -13,10 +13,10 @@ import type {
 const LEGACY_BUILTIN_LOADER_NAMES = ['text', 'json', 'buffer', 'import'] as const
 
 const BUILTIN_LOADERS: Record<DeriveLoaderBuiltin, DeriveLoaderBase> = {
-  _buffer: async absPath => ({ content: await fs.promises.readFile(absPath) }),
-  _import: async absPath => ({ content: await import(pathToFileURL(absPath).href) }),
-  _text: async absPath => ({ content: await fs.promises.readFile(absPath, 'utf8') }),
-  _json: async absPath => ({ content: JSON.parse(await fs.promises.readFile(absPath, 'utf8')) }),
+  _buffer: async absPath => ({ content: await fs.promises.readFile(absPath), loader: '_buffer' }),
+  _import: async absPath => ({ content: await import(pathToFileURL(absPath).href), loader: '_import' }),
+  _text: async absPath => ({ content: await fs.promises.readFile(absPath, 'utf8'), loader: '_text' }),
+  _json: async absPath => ({ content: JSON.parse(await fs.promises.readFile(absPath, 'utf8')), loader: '_json' }),
 }
 
 function normalizeBuiltinLoaderName(name: unknown): DeriveLoaderBuiltin | undefined {

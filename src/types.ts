@@ -5,6 +5,7 @@ export type DeriveChange = {
   path: string
   timestamp?: number
   content?: unknown
+  loader?: string
 }
 
 export type DeriveEvent =
@@ -56,7 +57,7 @@ export type EmitResult = {
 }
 
 export type Promisable<T> = T | Promise<T>
-export type DeriveLoaderResult = { content: unknown } | undefined
+export type DeriveLoaderResult = { content: unknown; loader?: string } | undefined
 export type DeriveLoaderBuiltin = '_text' | '_json' | '_buffer' | '_import'
 export type LegacyBuiltinLoadType = 'text' | 'json' | 'buffer' | 'import'
 export type BuiltinLoadType = LegacyBuiltinLoadType

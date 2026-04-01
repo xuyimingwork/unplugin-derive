@@ -1,9 +1,8 @@
 import fg from 'fast-glob'
 import { emitResultFiles } from './emitter.js'
-import { loadChangeContent } from './loader.js'
 import { normalizeIncomingAbsPath } from './path.js'
 import { createTaskQueue } from './queue.js'
-import type { DeriveChange, DeriveEvent } from '../types.js'
+import type { DeriveChange, DeriveEvent, DeriveOptionLoadResolved } from '../types.js'
 import type { ResolvedDeriveOptions } from './options.js'
 import type { DeriveTask } from './queue.js'
 
@@ -33,6 +32,19 @@ function normalizePatchChanges(root: string, changes: DeriveChange[]): DeriveCha
     .filter(change => change.path !== '')
 }
 
+async function loadChanges(
+  changes: DeriveChange[],
+  load: DeriveOptionLoadResolved
+): Promise<DeriveChange[]> {
+  return Promise.all(
+    changes.map(async change => {
+      const result = await load(change.path)
+      if (!result || typeof result !== 'object' || !('content' in result)) return change
+      return { ...change, content: result.content, loader: result.loader }
+    })
+  )
+}
+
 export function createDeriveRuntime(options: ResolvedDeriveOptions): Runtime {
   const { root, watch, log, load, derive, prepareGitignore } = options
 
@@ -49,17 +61,10 @@ export function createDeriveRuntime(options: ResolvedDeriveOptions): Runtime {
       }
       log(`start derive task (${task.type}, changes=${changes.length})`)
       stage = 'load content'
-      const loadedChanges = await Promise.all(
-        changes.map(change =>
-          loadChangeContent(
-            change.path,
-            change.type,
-            change.timestamp,
-            load
-          )
-        )
-      )
-      const event: DeriveEvent = { type: task.type, changes: loadedChanges }
+      const event: DeriveEvent = { 
+        type: task.type, 
+        changes: await loadChanges(changes, load)
+      }
       stage = 'derive'
       const result = await derive(event)
       stage = 'prepare gitignore'
