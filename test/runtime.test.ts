@@ -23,7 +23,7 @@ describe('createDeriveRuntime', () => {
     const runtime = createDeriveRuntime(resolveOptions({
       root,
       watch: 'src/**/*.txt',
-      load: async () => 'text' as const,
+      load: async () => '_text' as const,
       derive: async event => ({
         files: [
           {
@@ -60,7 +60,7 @@ describe('createDeriveRuntime', () => {
     const runtime = createDeriveRuntime(resolveOptions({
       root,
       watch: 'src/**/*.txt',
-      load: async () => 'text' as const,
+      load: async () => '_text' as const,
       derive: async event => ({
         files: [
           {
@@ -102,7 +102,7 @@ describe('createDeriveRuntime', () => {
     const runtime = createDeriveRuntime(resolveOptions({
       root,
       watch: 'src/**/*.txt',
-      load: async () => 'text' as const,
+      load: async () => '_text' as const,
       banner: {
         style: 'line-slash',
         data: { author: 'plugin', source: 'src/**/*.txt' }
@@ -140,7 +140,7 @@ describe('createDeriveRuntime', () => {
     const runtime = createDeriveRuntime(resolveOptions({
       root,
       watch: 'src/**/*.txt',
-      load: async () => 'text' as const,
+      load: async () => '_text' as const,
       gitignore: true,
       derive: async () => ({
         files: [
@@ -166,7 +166,7 @@ describe('createDeriveRuntime', () => {
     const runtime = createDeriveRuntime(resolveOptions({
       root,
       watch: 'src/**/*.txt',
-      load: async () => 'text' as const,
+      load: async () => '_text' as const,
       gitignore: ['generated/static.txt', 'cache/tmp.txt'],
       derive: async () => ({
         files: [{ path: 'generated/a.txt', content: 'A' }]

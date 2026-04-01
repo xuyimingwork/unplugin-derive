@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resolveOptions } from '../src/core/options.ts'
-import type { BuiltinLoadType } from '../src/types.ts'
 import { createTempRoot, removeDir } from './utils.ts'
 
 const tempDirs: string[] = []
@@ -62,7 +61,7 @@ describe('resolveOptions', () => {
 
     const userLoad = vi.fn(async (relPath: string) => {
       expect(relPath).toBe('src/input.txt')
-      return 'text' as const
+      return '_text' as const
     })
 
     const { load } = resolveOptions({
@@ -84,7 +83,7 @@ describe('resolveOptions', () => {
     await fs.promises.mkdir(path.dirname(sourceFile), { recursive: true })
     await fs.promises.writeFile(sourceFile, 'fallback-content', 'utf8')
 
-    const userLoad = vi.fn(async () => ['json', 'text'] as BuiltinLoadType[])
+    const userLoad = vi.fn(async () => ['_json', '_text'] as const)
 
     const { load } = resolveOptions({
       root,
@@ -130,7 +129,7 @@ describe('resolveOptions', () => {
       () => {
         throw new Error('factory failed')
       },
-      'text' as const
+      '_text' as const
     ])
 
     const { load } = resolveOptions({
@@ -144,7 +143,7 @@ describe('resolveOptions', () => {
     expect(result).toEqual({ content: 'fallback-content' })
   })
 
-  it('should ignore non-array load factory return value', async () => {
+  it('should treat top-level load factory return value as single custom loader', async () => {
     const root = await createTempRoot('derive-options-load-factory-unsupported')
     tempDirs.push(root)
 
@@ -162,10 +161,10 @@ describe('resolveOptions', () => {
     })
 
     const result = await load(sourceFile)
-    expect(result).toBeUndefined()
+    expect(result).toEqual({ content: { fromFactory: true } })
   })
 
-  it('should ignore object load result without content field', async () => {
+  it('should throw when load result object has no content field', async () => {
     const root = await createTempRoot('derive-options-load-invalid-object')
     tempDirs.push(root)
 
@@ -182,8 +181,64 @@ describe('resolveOptions', () => {
       derive: async () => ({ files: [] })
     })
 
+    await expect(load(sourceFile)).rejects.toThrowError('invalid loader: expected built-in loader name or function')
+  })
+
+  it('should support fixed built-in load shorthand', async () => {
+    const root = await createTempRoot('derive-options-load-fixed-single')
+    tempDirs.push(root)
+
+    const sourceFile = path.join(root, 'src/input.txt')
+    await fs.promises.mkdir(path.dirname(sourceFile), { recursive: true })
+    await fs.promises.writeFile(sourceFile, 'hello-fixed', 'utf8')
+
+    const { load } = resolveOptions({
+      root,
+      watch: 'src/**/*.txt',
+      load: '_text',
+      derive: async () => ({ files: [] })
+    })
+
     const result = await load(sourceFile)
-    expect(result).toBeUndefined()
+    expect(result).toEqual({ content: 'hello-fixed' })
+  })
+
+  it('should support fixed load chain shorthand', async () => {
+    const root = await createTempRoot('derive-options-load-fixed-chain')
+    tempDirs.push(root)
+
+    const sourceFile = path.join(root, 'src/input.txt')
+    await fs.promises.mkdir(path.dirname(sourceFile), { recursive: true })
+    await fs.promises.writeFile(sourceFile, 'hello-chain', 'utf8')
+
+    const { load } = resolveOptions({
+      root,
+      watch: 'src/**/*.txt',
+      load: ['_json', '_text'],
+      derive: async () => ({ files: [] })
+    })
+
+    const result = await load(sourceFile)
+    expect(result).toEqual({ content: 'hello-chain' })
+  })
+
+  it('should support legacy built-in names at runtime', async () => {
+    const root = await createTempRoot('derive-options-load-legacy-builtin')
+    tempDirs.push(root)
+
+    const sourceFile = path.join(root, 'src/input.txt')
+    await fs.promises.mkdir(path.dirname(sourceFile), { recursive: true })
+    await fs.promises.writeFile(sourceFile, 'legacy-ok', 'utf8')
+
+    const { load } = resolveOptions({
+      root,
+      watch: 'src/**/*.txt',
+      load: ['json', 'text'] as any,
+      derive: async () => ({ files: [] })
+    })
+
+    const result = await load(sourceFile)
+    expect(result).toEqual({ content: 'legacy-ok' })
   })
 
   it('should normalize derive paths when output files include invalid targets', async () => {

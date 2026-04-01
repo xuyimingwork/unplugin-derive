@@ -126,39 +126,28 @@ await build({
 
 ### Load 策略
 
-`load(file)` 可以返回以下几种形式：
+`load` 支持 5 种常见配置形态：
 
-- `undefined`：跳过加载，事件中该文件不带 `content`
-- `"text"` / `"json"` / `"buffer"` / `"import"`：使用内置加载方式
-- `Array<LoadMethod>`：按顺序尝试，命中即停止（数组项支持 `() => ({ content })` 自定义工厂）
-- `{ content }`：直接提供内容
+#### 1) 单个内置加载器
 
-其中 `LoadMethod` 可理解为：内置 loader 或自定义工厂。  
-注意：非数组场景不支持直接返回函数工厂（即不支持 `load: () => () => ({ content })`）。
-
-示例（按顺序 fallback + 自定义工厂）：
+对所有命中的文件统一使用一个内置加载器（`'_text' | '_json' | '_buffer' | '_import'`）。
 
 ```ts
 Derive({
-  watch: ['src/api/**/*.js'],
-  load(file) {
-    if (file.endsWith('.json')) return ['json', 'text']
-    if (file.endsWith('.js')) return ['import', () => ({ content: { raw: 'from custom loader' } })]
-    return undefined
-  },
-  deriveWhen: {
-    buildStart: 'full',
-    watchChange: 'full'
-  },
+  watch: ['src/**/*.txt'],
+  load: '_text',
   async derive(event) {
     return {
-      files: [{ path: 'src/generated.txt', content: `event=${event.type}\n` }]
+      files: [{ path: 'src/generated.txt', content: String(event.changes[0]?.content ?? '') }]
     }
   }
 })
 ```
 
-简化示例（直接返回内容）：
+#### 2) 单个自定义加载器
+
+直接使用一个自定义加载器函数：`(path) => ({ content }) | undefined`。  
+`path` 为相对 `root` 的路径。
 
 ```ts
 Derive({
@@ -174,6 +163,61 @@ Derive({
   }
 })
 ```
+
+#### 3) 组合加载器
+
+使用数组按顺序 fallback，命中即停止。数组项可混用内置与自定义加载器。
+
+```ts
+Derive({
+  watch: ['src/api/**/*'],
+  load: ['_json', '_text', file => ({ content: { fallback: file } })],
+  async derive(event) {
+    return {
+      files: [{ path: 'src/generated.txt', content: `event=${event.type}\n` }]
+    }
+  }
+})
+```
+
+#### 4) 动态单个加载器
+
+使用函数按路径动态返回单个内置加载器。
+
+```ts
+Derive({
+  watch: ['src/**/*'],
+  load(file) {
+    if (file.endsWith('.json')) return '_json'
+    return '_text'
+  },
+  async derive() {
+    return { files: [] }
+  }
+})
+```
+
+#### 5) 动态组合加载器
+
+使用函数按路径动态返回数组链。
+
+```ts
+Derive({
+  watch: ['src/**/*'],
+  load(file) {
+    if (file.endsWith('.json')) return ['_json', '_text']
+    return ['_import', '_text']
+  },
+  async derive() {
+    return { files: [] }
+  }
+})
+```
+
+补充说明：
+
+- 兼容旧内置名：`'text' | 'json' | 'buffer' | 'import'` 在运行时仍可用，但推荐迁移到下划线写法。
+- 不支持 `load: () => () => ({ content })` 这类“返回函数”的嵌套形式。
 
 ### 事件和返回值
 

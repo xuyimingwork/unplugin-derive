@@ -55,23 +55,28 @@ export type EmitResult = {
   banner?: false | BannerConfig
 }
 
-export type BuiltinLoadType = 'text' | 'json' | 'buffer' | 'import'
+export type Promisable<T> = T | Promise<T>
+export type DeriveLoaderResult = { content: unknown } | undefined
+export type DeriveLoaderBuiltin = '_text' | '_json' | '_buffer' | '_import'
+export type LegacyBuiltinLoadType = 'text' | 'json' | 'buffer' | 'import'
+export type BuiltinLoadType = LegacyBuiltinLoadType
+/**
+ * @return 
+ * - { content: unknown } 表示 loader 已经正常处理资源
+ * - undefined/抛出异常 表示 loader 无法处理资源
+ */
+export type DeriveLoaderBase = (path: string) => Promisable<DeriveLoaderResult>
+export type DeriveLoader = DeriveLoaderBase | DeriveLoaderBuiltin
+export type DeriveLoadRouter = (path: string) => Promisable<DeriveLoaderBuiltin | DeriveLoader[]>
+export type DeriveLoadOption = DeriveLoader | DeriveLoader[] | DeriveLoadRouter
+export type ResolvedLoad = (path: string) => Promise<DeriveLoaderResult>
 
-export type LoadContentResult = {
-  content: unknown
-}
-
-export type LoadContentFactory = () => LoadContentResult | undefined | Promise<LoadContentResult | undefined>
-
-export type LoadMethod = BuiltinLoadType | LoadContentFactory
-
-export type LoadResult =
-  | undefined
-  | BuiltinLoadType
-  | LoadMethod[]
-  | LoadContentResult
-
-export type LoadResolver = (path: string) => LoadResult | Promise<LoadResult>
+// Backward-compatible aliases used by internal runtime.
+export type LoadResolver = ResolvedLoad
+export type LoadContentResult = Exclude<DeriveLoaderResult, undefined>
+export type LoadContentFactory = DeriveLoaderBase
+export type LoadMethod = DeriveLoader | LegacyBuiltinLoadType
+export type LoadResult = DeriveLoaderResult | DeriveLoader | DeriveLoader[] | LegacyBuiltinLoadType | LoadMethod[]
 
 export type GitignoreMatcher = (file: string) => boolean
 export type GitignoreOption = true | string | string[] | GitignoreMatcher
@@ -98,7 +103,7 @@ export type DerivePluginOptions = {
   /**
    * 根据文件路径决定是否加载内容，并如何加载。
    */
-  load?: LoadResolver
+  load?: DeriveLoadOption
   /**
    * 接收 full/patch 事件，返回要写入/删除的文件列表。
    */
