@@ -1,5 +1,20 @@
 # 更新日志
 
+## [0.5.0] - 2026-04-01
+
+### 新增
+
+- `watch` 支持否定模式（如 `!foo/**`），可在包含规则中进一步排除不需要监听或处理的路径。
+- `DeriveChange` 新增可选字段 `loader?: string`，用于在 `derive(event)` 中识别当前变更的内容由哪个 loader 加载。
+
+### 优化
+
+- 重构 `load` 解析流程与类型定义：
+  - 统一内置 loader 名称为 `'_text' | '_json' | '_buffer' | '_import'`
+  - 继续兼容旧名称 `text | json | buffer | import`
+  - 明确动态路由与数组 fallback 的行为边界
+- 补充并更新 `options`、`path`、`runtime` 相关测试用例，覆盖负向匹配与 loader 行为细节。
+
 ## [0.4.0] - 2026-03-31
 
 ### 新增

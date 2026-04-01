@@ -22,10 +22,7 @@ export default defineConfig({
   plugins: [
     Derive({
       watch: ['src/api/**/*.js'],
-      load(path) {
-        if (path.endsWith('.js')) return 'text'
-        return undefined
-      },
+      load: 'text',
       async derive(event) {
         const count = event.changes.length
         const content = `// generated from ${event.type}, files: ${count}\n`
@@ -107,28 +104,41 @@ await build({
 
 </details>
 
-### 选项
+### 配置总览
 
-- **root**: 工程根目录（默认 `process.cwd()`）
-- **watch**: 监听文件 glob（相对 `root`）
-- **load**: 可选内容加载器，详见下方「Load 策略」
-- **derive**: 核心回调，签名 `derive(event: DeriveEvent)`，返回 `{ files }`
-- **verbose**: 输出运行日志（默认 `false`）
-- **banner**: 全局 banner 配置（可被 `EmitResult.banner` 和 `EmitFile.banner` 覆盖）
-- **gitignore**: 自动维护 `root/.gitignore`
-  - `true`: 将本次生成文件全部写入 `.gitignore`
-  - `string` / `string[]`: 直接作为 `.gitignore` 条目写入
-  - `(file) => boolean`: 按文件相对路径过滤后写入
-- **deriveWhen**: 控制各阶段触发 `derive` 的事件类型
-  - `buildStart`: `full` | `none`（默认 `full`）
-  - `watchChange`: `patch` | `full` | `none`（默认 `patch`）
-  - 当 `watchChange: "full"` 时，仅在变更路径命中 `watch` 时触发 full
+- **输入与触发**: `watch`、`deriveWhen`
+- **内容加载**: `load`
+- **派生输出**: `derive`
+- **输出加工**: `banner`
+- **输出后处理**: `gitignore`
+- **通用项**: `root`、`verbose`
 
-### Load 策略
+### 执行流程
+
+一次 `derive` 任务的执行顺序如下：
+
+1. 收集变更（`full` 扫描 `watch`，`patch` 使用传入变更并做路径归一化）
+2. 依次执行 `load`，为每个 change 补充 `content` / `loader`（可选）
+3. 调用 `derive(event)`，拿到要写入/删除的 `files`
+4. 过滤非法输出（越界路径、命中 `watch` 的输出会被跳过）
+5. 按配置维护 `.gitignore`（如果启用）
+6. 最终执行文件写入/删除（包含 banner 合并与渲染）
+
+### 按执行顺序的配置详解
+
+#### 1) `watch` 与 `deriveWhen`（何时触发）
+
+- `watch`: 监听文件 glob（相对 `root`）
+- 支持否定模式：`!pattern`（如 `['src/**/*.ts', '!src/**/*.test.ts']`）
+- `deriveWhen.buildStart`: `full` | `none`（默认 `full`）
+- `deriveWhen.watchChange`: `patch` | `full` | `none`（默认 `patch`）
+- 当 `watchChange: "full"` 时，仅在变更路径命中 `watch` 时触发 full
+
+#### 2) `load`（如何加载内容）
 
 `load` 支持 5 种常见配置形态：
 
-#### 1) 单个内置加载器
+##### 单个内置加载器
 
 对所有命中的文件统一使用一个内置加载器（`'_text' | '_json' | '_buffer' | '_import'`）。
 
@@ -144,7 +154,7 @@ Derive({
 })
 ```
 
-#### 2) 单个自定义加载器
+##### 单个自定义加载器
 
 直接使用一个自定义加载器函数：`(path) => ({ content }) | undefined`。  
 `path` 为相对 `root` 的路径。
@@ -164,7 +174,7 @@ Derive({
 })
 ```
 
-#### 3) 组合加载器
+##### 组合加载器
 
 使用数组按顺序 fallback，命中即停止。数组项可混用内置与自定义加载器。
 
@@ -180,7 +190,7 @@ Derive({
 })
 ```
 
-#### 4) 动态单个加载器
+##### 动态单个加载器
 
 使用函数按路径动态返回单个内置加载器。
 
@@ -197,7 +207,7 @@ Derive({
 })
 ```
 
-#### 5) 动态组合加载器
+##### 动态组合加载器
 
 使用函数按路径动态返回数组链。
 
@@ -218,17 +228,26 @@ Derive({
 
 - 兼容旧内置名：`'text' | 'json' | 'buffer' | 'import'` 在运行时仍可用，但推荐迁移到下划线写法。
 - 不支持 `load: () => () => ({ content })` 这类“返回函数”的嵌套形式。
+- `change.loader` 为可选字段：内置 loader 会自动提供；自定义 loader 如需该信息，请在返回值中自行带上 `loader`。
+
+#### 3) `derive`（如何产出文件）
+
+`derive` 是核心回调，签名为 `derive(event: DeriveEvent)`，返回 `EmitResult`：
+
+- 通过 `event.changes` 读取本次输入
+- 返回 `files` 指定要写入或删除的目标文件
+- 输出路径会在内部做安全过滤（越界路径、命中 `watch` 的输出会被跳过）
 
 ### 事件和返回值
 
 - `DeriveEvent`
   - `type: "full" | "patch"`
-  - `changes: Array<{ type, path, timestamp?, content? }>`
+  - `changes: Array<{ type, path, timestamp?, content?, loader? }>`
 - `EmitResult`
   - `files: Array<{ path, content, banner? } | { path, type: "delete", banner? }>`
   - `banner?: false | BannerConfig`
 
-### Banner（可选）
+#### 4) `banner`（输出加工，可选）
 
 - 覆盖顺序：`DerivePluginOptions.banner` -> `EmitResult.banner` -> `EmitFile.banner`（后者覆盖前者）
 - `false` 也遵循同样规则，表示该层显式禁用
@@ -257,6 +276,17 @@ Derive({
   }
 })
 ```
+
+#### 5) `gitignore`（输出后处理，可选）
+
+- `true`: 将本次生成文件全部写入 `.gitignore`
+- `string` / `string[]`: 直接作为 `.gitignore` 条目写入
+- `(file) => boolean`: 按文件相对路径过滤后写入
+
+#### 6) `root` 与 `verbose`（通用项）
+
+- `root`: 工程根目录（默认 `process.cwd()`）
+- `verbose`: 输出运行日志（默认 `false`）
 
 ### 队列语义
 
