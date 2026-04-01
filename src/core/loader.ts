@@ -1,10 +1,10 @@
-import type { DeriveChange, LoadResolver } from '../types.js'
+import type { DeriveChange, DeriveOptionLoadResolved } from '../types.js'
 
 export async function loadChangeContent(
   absPath: string,
   changeType: DeriveChange['type'],
   timestamp: DeriveChange['timestamp'],
-  load: LoadResolver
+  load: DeriveOptionLoadResolved
 ): Promise<DeriveChange> {
   const baseChange: DeriveChange = {
     type: changeType,

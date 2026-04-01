@@ -4,7 +4,7 @@ import { ensureGitignoreEntries } from './gitignore.js'
 import { isPathWatched, isWithinRoot, normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path.js'
 import { createLoadResolver } from './load-resolver.js'
 import { mergeBanner } from './banner-merge.js'
-import type { DeriveBuildStartType, DerivePluginOptions, DeriveWatchChangeType, EmitResult, GitignoreMatcher, ResolvedLoad } from '../types.js'
+import type { DeriveBuildStartType, DerivePluginOptions, DeriveWatchChangeType, EmitResult, GitignoreMatcher, DeriveOptionLoadResolved } from '../types.js'
 
 export type DeriveWhenResolved = {
   buildStart: DeriveBuildStartType
@@ -15,7 +15,7 @@ export type ResolvedDeriveOptions = {
   root: string
   watch: string[]
   log: (message: string) => void
-  load: ResolvedLoad
+  load: DeriveOptionLoadResolved
   derive: DerivePluginOptions['derive']
   prepareGitignore: (result: EmitResult) => Promise<void>
   deriveWhen: DeriveWhenResolved
