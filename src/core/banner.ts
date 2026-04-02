@@ -1,4 +1,4 @@
-import type { DeriveBanner, DeriveBannerData, BannerOverviewNode, BannerRenderContext, DeriveBannerStyle } from '../types.js'
+import type { DeriveBanner, DeriveBannerData, DeriveBannerDataOverview, DeriveBannerContext, DeriveBannerStyle } from '../types.js'
 
 const DEFAULT_STYLE: DeriveBannerStyle = 'block-jsdoc'
 
@@ -10,7 +10,7 @@ function toTextArray(value: unknown): string[] {
     .filter(Boolean)
 }
 
-function renderOverviewLines(node: BannerOverviewNode | undefined, depth = 0): string[] {
+function renderOverviewLines(node: DeriveBannerDataOverview | undefined, depth = 0): string[] {
   if (node == null) return []
   const indent = '  '.repeat(Math.max(depth - 1, 0))
   const prefix = depth === 0 ? '' : '- '
@@ -53,7 +53,7 @@ function buildDefaultBody(data: DeriveBannerData): string {
   const authors = toTextArray(data.author)
   if (!authors.length) return ''
   const sources = toTextArray(data.source)
-  const overview = renderOverviewLines(data.overview as BannerOverviewNode | undefined)
+  const overview = renderOverviewLines(data.overview as DeriveBannerDataOverview | undefined)
   const authorText = authors.join(', ')
   const lines = [
     '@generated',
@@ -106,7 +106,7 @@ export function renderBannerForFile(
   if (!banner) return ''
   const style = banner.style ?? DEFAULT_STYLE
   const data = (banner.data || {}) as DeriveBannerData
-  const context: BannerRenderContext = { path, content, data, style }
+  const context: DeriveBannerContext = { path, content, data, style }
   let body = ''
   if (banner.formatter) {
     body = String(banner.formatter(context) || '')

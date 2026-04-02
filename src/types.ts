@@ -19,20 +19,20 @@ export type DeriveEvent =
 
 export type DeriveBannerStyle = 'line-slash' | 'line-hash' | 'block-star' | 'block-jsdoc'
 
-export type BannerOverviewNode =
+export type DeriveBannerDataOverview =
   | string
   | {
       description?: string
-      items?: BannerOverviewNode[]
+      items?: DeriveBannerDataOverview[]
     }
 
 export type DeriveBannerData = Record<string, unknown> & {
   author?: string | string[]
   source?: string | string[]
-  overview?: BannerOverviewNode
+  overview?: DeriveBannerDataOverview
 }
 
-export type BannerRenderContext = {
+export type DeriveBannerContext = {
   path: string
   content: string
   data: DeriveBannerData
@@ -42,13 +42,13 @@ export type BannerRenderContext = {
 export type DeriveBanner = {
   style?: DeriveBannerStyle
   template?: string
-  formatter?: (context: BannerRenderContext) => string
+  formatter?: (context: DeriveBannerContext) => string
   data?: DeriveBannerData
 } | false
 
 export type DeriveFile =
   | { path: string; content: string; banner?: DeriveBanner }
-  | { path: string; type: 'delete'; banner?: DeriveBanner }
+  | { path: string; type: 'delete' }
 
 export type DeriveResult = {
   files: DeriveFile[]
@@ -78,7 +78,7 @@ export type LoadMethod = DeriveLoader | LegacyBuiltinLoadType
 export type LoadResult = DeriveLoaderResult | DeriveLoader | DeriveLoader[] | LegacyBuiltinLoadType | LoadMethod[]
 
 export type GitignoreMatcher = (file: string) => boolean
-export type GitignoreOption = true | string | string[] | GitignoreMatcher
+export type DeriveOptionGitignore = true | string | string[] | GitignoreMatcher
 export type DeriveBuildStartType = 'full' | 'none'
 export type DeriveWatchChangeType = DeriveEvent['type'] | 'none'
 export type DeriveWhen = {
@@ -106,7 +106,7 @@ export type DerivePluginOptions = {
   /**
    * 接收 full/patch 事件，返回要写入/删除的文件列表。
    */
-  derive: (event: DeriveEvent) => DeriveResult | Promise<DeriveResult>
+  derive: (event: DeriveEvent) => Promisable<DeriveResult>
   /**
    * 全局 banner 配置，支持被 EmitResult / EmitFile 覆盖。
    */
@@ -114,7 +114,7 @@ export type DerivePluginOptions = {
   /**
    * 自动将输出文件加入 `root/.gitignore`。
    */
-  gitignore?: GitignoreOption
+  gitignore?: DeriveOptionGitignore
   /**
    * 控制各阶段触发 `derive` 的事件类型。
    */
