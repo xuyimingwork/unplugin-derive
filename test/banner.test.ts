@@ -1,52 +1,60 @@
 import { describe, expect, it } from 'vitest'
-import { mergeBanner } from '../src/core/banner-merge.ts'
-import { renderBannerForFile } from '../src/core/banner.ts'
+import { getBanner } from '../src/core/banner.ts'
 
-describe('mergeBanner', () => {
-  it('should apply later banner over earlier banner', () => {
-    const merged = mergeBanner(
+describe('getBanner', () => {
+  it('should merge later banner over earlier banner', () => {
+    const rendered = getBanner(
+      [
+        {
+          style: 'block-jsdoc',
+          data: { author: 'global', source: 'src/**/*.ts' }
+        },
+        {
+          template: 'author=<%= data.author %>',
+          data: { author: 'result' }
+        },
+        {
+          style: 'line-slash',
+          data: { source: 'src/api/**/*.ts' }
+        }
+      ],
       {
-        style: 'block-jsdoc',
-        data: { author: 'global', source: 'src/**/*.ts' }
-      },
-      {
-        template: 'author=<%= author %>',
-        data: { author: 'result' }
-      },
-      {
-        style: 'line-slash',
-        data: { source: 'src/api/**/*.ts' }
+        path: '/tmp/out.ts',
+        content: 'export const x = 1\n'
       }
     )
-    expect(merged).toEqual({
-      style: 'line-slash',
-      template: 'author=<%= author %>',
-      data: {
-        author: 'result',
-        source: 'src/api/**/*.ts'
-      }
-    })
+    expect(rendered).toContain('// author=result')
+    expect(rendered).not.toContain('global')
   })
 
   it('should treat false as normal override value', () => {
-    expect(mergeBanner({ style: 'block-jsdoc' }, false)).toBe(false)
-    expect(mergeBanner(false, { style: 'line-hash' })).toEqual({ style: 'line-hash' })
-  })
-})
+    const disabled = getBanner(
+      [{ style: 'block-jsdoc', data: { author: 'a' } }, false],
+      { path: '/tmp/out.ts', content: 'X' }
+    )
+    expect(disabled).toBe('')
 
-describe('renderBannerForFile', () => {
+    const reenabled = getBanner(
+      [false, { style: 'line-hash', data: { author: 'b' } }],
+      { path: '/tmp/out.ts', content: 'X' }
+    )
+    expect(reenabled).toContain('# @generated')
+  })
+
   it('should render built-in template when data.author is provided', () => {
-    const rendered = renderBannerForFile(
-      {
-        data: {
-          author: 'tester',
-          source: ['src/a.ts', 'src/b.ts'],
-          overview: {
-            description: 'stats',
-            items: ['count=2']
+    const rendered = getBanner(
+      [
+        {
+          data: {
+            author: 'tester',
+            source: ['src/a.ts', 'src/b.ts'],
+            overview: {
+              description: 'stats',
+              items: ['count=2']
+            }
           }
         }
-      },
+      ],
       {
         path: '/tmp/out.ts',
         content: 'export const x = 1\n'
@@ -60,13 +68,15 @@ describe('renderBannerForFile', () => {
   })
 
   it('should prefer formatter over template', () => {
-    const rendered = renderBannerForFile(
-      {
-        template: 'TEMPLATE',
-        formatter: () => 'FORMATTER',
-        style: 'line-slash',
-        data: { author: 'tester' }
-      },
+    const rendered = getBanner(
+      [
+        {
+          template: 'TEMPLATE',
+          formatter: () => 'FORMATTER',
+          style: 'line-slash',
+          data: { author: 'tester' }
+        }
+      ],
       {
         path: '/tmp/out.ts',
         content: 'export const x = 1\n'
@@ -77,12 +87,14 @@ describe('renderBannerForFile', () => {
   })
 
   it('should escape block comment terminator for block styles', () => {
-    const rendered = renderBannerForFile(
-      {
-        style: 'block-jsdoc',
-        template: 'danger: <%= text %>',
-        data: { text: 'x */ y' }
-      },
+    const rendered = getBanner(
+      [
+        {
+          style: 'block-jsdoc',
+          template: 'danger: <%= data.text %>',
+          data: { text: 'x */ y' }
+        }
+      ],
       {
         path: '/tmp/out.ts',
         content: 'export const x = 1\n'
@@ -90,5 +102,29 @@ describe('renderBannerForFile', () => {
     )
     expect(rendered).toContain('danger: x *\\/ y')
     expect(rendered).not.toContain('x */ y')
+  })
+
+  it('should render empty when no data.author is provided', () => {
+    const rendered = getBanner(
+      [{ style: 'block-jsdoc', data: { source: 'src/**/*.ts' } }],
+      { path: '/tmp/out.ts', content: 'X' }
+    )
+    expect(rendered).toBe('')
+  })
+
+  it('should not expose path in template scope by default', () => {
+    const rendered = getBanner(
+      [
+        {
+          style: 'line-slash',
+          template: 'path=<%= data.path %>; author=<%= data.author %>',
+          data: { author: 'tester' }
+        }
+      ],
+      { path: '/tmp/out.ts', content: 'X' }
+    )
+    expect(rendered).toContain('// path=')
+    expect(rendered).toContain('author=tester')
+    expect(rendered).not.toContain('/tmp/out.ts')
   })
 })

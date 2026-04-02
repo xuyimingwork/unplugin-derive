@@ -17,6 +17,9 @@ export type DeriveEvent =
       changes: DeriveChange[]
     }
 
+export type DeriveOptionDerive = (event: DeriveEvent) => Promisable<DeriveResult>
+export type DeriveResolved = (event: DeriveEvent) => Promise<DeriveResultResolved>
+
 export type DeriveBannerStyle = 'line-slash' | 'line-hash' | 'block-star' | 'block-jsdoc'
 
 export type DeriveBannerDataOverview =
@@ -50,9 +53,18 @@ export type DeriveFile =
   | { path: string; content: string; banner?: DeriveBanner }
   | { path: string; type: 'delete' }
 
+
 export type DeriveResult = {
   files: DeriveFile[]
   banner?: DeriveBanner
+}
+
+export type DeriveFileResolved =
+  | { path: string; content: string }
+  | { path: string; type: 'delete' }
+
+export type DeriveResultResolved = {
+  files: DeriveFileResolved[]
 }
 
 export type Promisable<T> = T | Promise<T>
@@ -106,7 +118,7 @@ export type DerivePluginOptions = {
   /**
    * 接收 full/patch 事件，返回要写入/删除的文件列表。
    */
-  derive: (event: DeriveEvent) => Promisable<DeriveResult>
+  derive: DeriveOptionDerive
   /**
    * 全局 banner 配置，支持被 EmitResult / EmitFile 覆盖。
    */

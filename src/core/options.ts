@@ -1,10 +1,10 @@
 import path from 'node:path'
 import { PLUGIN_NAME } from './constants.js'
 import { ensureGitignoreEntries } from './gitignore.js'
-import { isPathWatched, isWithinRoot, normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path.js'
+import { normalizeRelPath, normalizeSlashes, toRelPath } from './path.js'
 import { createLoadResolver } from './load-resolver.js'
-import { mergeBanner } from './banner-merge.js'
-import type { DeriveBuildStartType, DerivePluginOptions, DeriveWatchChangeType, DeriveResult, GitignoreMatcher, DeriveOptionLoadResolved } from '../types.js'
+import { createDeriveResolver } from './derive-resolver.js'
+import type { DeriveBuildStartType, DerivePluginOptions, DeriveWatchChangeType, DeriveResult, GitignoreMatcher, DeriveOptionLoadResolved, DeriveResolved } from '../types.js'
 
 export type DeriveWhenResolved = {
   buildStart: DeriveBuildStartType
@@ -16,7 +16,7 @@ export type ResolvedDeriveOptions = {
   watch: string[]
   log: (message: string) => void
   load: DeriveOptionLoadResolved
-  derive: DerivePluginOptions['derive']
+  derive: DeriveResolved
   prepareGitignore: (result: DeriveResult) => Promise<void>
   deriveWhen: DeriveWhenResolved
 }
@@ -92,66 +92,6 @@ function normalizeGitignore(
   }
 }
 
-function createDeriveResolver(
-  userDerive: DerivePluginOptions['derive'],
-  {
-    root,
-    watch,
-    banner,
-    log,
-  }: {
-    root: string
-    watch: string[]
-    banner: DerivePluginOptions['banner']
-    log: (message: string) => void
-  }
-): DerivePluginOptions['derive'] {
-  return async event => {
-    const userEvent = {
-      ...event,
-      changes: event.changes.map(change => ({
-        ...change,
-        path: toRelPath(root, change.path)
-      }))
-    }
-    const result = await userDerive(userEvent)
-    if (!result || typeof result !== 'object') {
-      throw new Error('`derive` must return an object with `files` array.')
-    }
-    const files = (Array.isArray(result.files) ? result.files : [])
-      .map(file => ({
-        ...file,
-        path: normalizeSlashes(toAbsPath(root, normalizeRelPath(file.path)))
-      }))
-      .filter(file => {
-        const absPath = file.path
-        const relPath = toRelPath(root, absPath)
-        if (!relPath || !isWithinRoot(root, absPath)) {
-          log(`skip emit ${absPath} (outside root)`)
-          return false
-        }
-        if (isPathWatched(absPath, watch)) {
-          log(`skip emit ${relPath} (target is watched)`)
-          return false
-        }
-        return true
-      })
-    const resultBanner = mergeBanner(banner, result.banner)
-    const normalizedResult: DeriveResult = {
-      ...result,
-      banner: resultBanner,
-      files: files.map(file => {
-        if (!('content' in file)) return file
-        return {
-          ...file,
-          banner: mergeBanner(resultBanner, file.banner)
-        }
-      })
-    }
-    return normalizedResult
-  }
-}
-
 function createPrepareGitignore(
   root: string,
   gitignoreInput: DerivePluginOptions['gitignore'],
@@ -196,9 +136,7 @@ export function resolveOptions(userOptions: DerivePluginOptions): ResolvedDerive
   const prepareGitignore = createPrepareGitignore(root, userOptions.gitignore, log)
   const derive = createDeriveResolver(userOptions.derive, {
     root,
-    watch,
     banner: userOptions.banner,
-    log
   })
   return { root, watch, log, load, derive, prepareGitignore, deriveWhen }
 }

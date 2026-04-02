@@ -34,7 +34,7 @@ describe('resolveOptions', () => {
     ])
   })
 
-  it('should keep negated watch paths writable in derive output filtering', async () => {
+  it('should keep negated watch paths writable in emit output filtering', async () => {
     const root = await createTempRoot('derive-watch-negation')
     tempDirs.push(root)
 
@@ -55,6 +55,7 @@ describe('resolveOptions', () => {
     })
 
     expect(result.files).toEqual([
+      { path: path.join(root, 'src/api/user.js'), content: 'skip me' },
       { path: path.join(root, 'src/api/index.js'), content: 'keep me' }
     ])
   })
@@ -294,7 +295,9 @@ describe('resolveOptions', () => {
       changes: [{ type: 'update', path: 'src/a.ts' }]
     })
     expect(result.files).toEqual([
-      { path: path.join(root, 'dist/result.txt'), content: 'ok' }
+      { path: path.join(root, 'dist/result.txt'), content: 'ok' },
+      { path: path.join(root, 'src/watched.ts'), content: 'skip watched output' },
+      { path: path.join(root, '../outside.txt'), content: 'skip outside root' }
     ])
   })
 

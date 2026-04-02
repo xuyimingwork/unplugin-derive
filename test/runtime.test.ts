@@ -150,7 +150,7 @@ describe('createDeriveRuntime', () => {
             path: 'generated/a.txt',
             content: 'A',
             banner: {
-              template: 'author=<%= author %>, source=<%= source %>',
+              template: 'author=<%= data.author %>, source=<%= data.source %>',
               data: { source: 'file-source' }
             }
           }

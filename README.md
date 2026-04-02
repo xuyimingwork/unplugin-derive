@@ -252,6 +252,8 @@ Derive({
 - 覆盖顺序：`DerivePluginOptions.banner` -> `EmitResult.banner` -> `EmitFile.banner`（后者覆盖前者）
 - `false` 也遵循同样规则，表示该层显式禁用
 - 渲染优先级：`formatter` > `template` > 默认模板（当 `data.author` 存在）
+- `template` 的渲染作用域是 `banner.data`（data-only scope），即 `<%= author %>` 会读取 `data.author`；`path/content/style` 等不会默认注入，如需使用请自行放到 `data` 中
+- `data` 合并是**浅合并**：后者覆盖前者的同名 key（嵌套对象不会做深合并）
 - `style` 可选值：`line-slash` / `line-hash` / `block-star` / `block-jsdoc`
 
 示例（默认模板）：

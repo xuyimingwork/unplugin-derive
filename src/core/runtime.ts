@@ -70,7 +70,7 @@ export function createDeriveRuntime(options: ResolvedDeriveOptions): Runtime {
       stage = 'prepare gitignore'
       await prepareGitignore(result)
       stage = 'emit files'
-      const summary = await emitResultFiles(result)
+      const summary = await emitResultFiles(result, { root, watch, log })
       const elapsed = Date.now() - startedAt
       log(`done derive task (${task.type}) written=${summary.written}, deleted=${summary.deleted}, skipped=${summary.skipped}, duration=${elapsed}ms`)
     } catch (e: any) {
