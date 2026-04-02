@@ -35,7 +35,7 @@ export function createDeriveResolver(
         if (isDeleteDeriveFile(file)) return { ...file, path }
         const prefix = getBanner(
           [banner, derived.banner, file.banner],
-          { path, content: file.content }
+          { path: file.path, content: file.content }
         )
         return {
           path, 

@@ -164,6 +164,43 @@ describe('createDeriveRuntime', () => {
     expect(output).toMatch(/A$/)
   })
 
+  it('should pass relative output path to banner.formatter', async () => {
+    const root = await createTempRoot('derive-runtime-banner-formatter-path')
+    tempDirs.push(root)
+    const srcFile = path.join(root, 'src/value.txt')
+    await fs.promises.mkdir(path.dirname(srcFile), { recursive: true })
+    await fs.promises.writeFile(srcFile, 'ok', 'utf8')
+
+    let receivedPath: string | undefined
+    const runtime = createDeriveRuntime(resolveOptions({
+      root,
+      watch: 'src/**/*.txt',
+      load: async () => '_text' as const,
+      derive: async () => ({
+        files: [
+          {
+            path: 'generated/a.txt',
+            content: 'A',
+            banner: {
+              style: 'line-slash',
+              formatter: context => {
+                receivedPath = context.path
+                return `path=${context.path}`
+              }
+            }
+          }
+        ]
+      })
+    }))
+
+    await runtime.run({ type: 'full', changes: [] })
+    expect(receivedPath).toBe('generated/a.txt')
+
+    const output = await fs.promises.readFile(path.join(root, 'generated/a.txt'), 'utf8')
+    expect(output).toContain('// path=generated/a.txt')
+    expect(output).toMatch(/A$/)
+  })
+
   it('should append generated files to root .gitignore without duplicates', async () => {
     const root = await createTempRoot('derive-runtime-gitignore')
     tempDirs.push(root)
