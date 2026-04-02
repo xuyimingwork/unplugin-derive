@@ -242,7 +242,7 @@ Derive({
 
 - `DeriveEvent`
   - `type: "full" | "patch"`
-  - `changes: Array<{ type, path, timestamp?, content?, loader? }>`
+  - `changes: Array<{ type, path, content?, loader? }>`
 - `EmitResult`
   - `files: Array<{ path, content, banner? } | { path, type: "delete", banner? }>`
   - `banner?: false | BannerConfig`

@@ -31,12 +31,12 @@ describe('createTaskQueue', () => {
     await Promise.all([first, second])
 
     expect(calls).toEqual([
-      { type: 'patch', changes: [{ type: 'create', path: '/a.ts', timestamp: undefined }] },
+      { type: 'patch', changes: [{ type: 'create', path: '/a.ts' }] },
       {
         type: 'patch',
         changes: [
-          { type: 'update', path: '/a.ts', timestamp: undefined },
-          { type: 'create', path: '/b.ts', timestamp: undefined }
+          { type: 'update', path: '/a.ts' },
+          { type: 'create', path: '/b.ts' }
         ]
       }
     ])

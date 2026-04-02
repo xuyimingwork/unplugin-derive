@@ -47,8 +47,7 @@ function mergeChangesByPath(prev: DeriveChange[], next: DeriveChange[]): DeriveC
     }
     merged.set(change.path, {
       ...change,
-      type: mergedType,
-      timestamp: change.timestamp ?? prevChange?.timestamp
+      type: mergedType
     })
   }
   return [...merged.values()].sort((a, b) => a.path.localeCompare(b.path))

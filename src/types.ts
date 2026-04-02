@@ -3,7 +3,6 @@ export type DeriveChangeType = 'create' | 'update' | 'delete' | 'unknown'
 export type DeriveChange = {
   type: DeriveChangeType
   path: string
-  timestamp?: number
   content?: unknown
   loader?: string
 }
