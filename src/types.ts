@@ -18,7 +18,7 @@ export type DeriveEvent =
       changes: DeriveChange[]
     }
 
-export type BannerStyle = 'line-slash' | 'line-hash' | 'block-star' | 'block-jsdoc'
+export type DeriveBannerStyle = 'line-slash' | 'line-hash' | 'block-star' | 'block-jsdoc'
 
 export type BannerOverviewNode =
   | string
@@ -27,7 +27,7 @@ export type BannerOverviewNode =
       items?: BannerOverviewNode[]
     }
 
-export type BannerData = Record<string, unknown> & {
+export type DeriveBannerData = Record<string, unknown> & {
   author?: string | string[]
   source?: string | string[]
   overview?: BannerOverviewNode
@@ -36,24 +36,24 @@ export type BannerData = Record<string, unknown> & {
 export type BannerRenderContext = {
   path: string
   content: string
-  data: BannerData
-  style: BannerStyle
+  data: DeriveBannerData
+  style: DeriveBannerStyle
 }
 
-export type BannerConfig = {
-  style?: BannerStyle
+export type DeriveBanner = {
+  style?: DeriveBannerStyle
   template?: string
   formatter?: (context: BannerRenderContext) => string
-  data?: BannerData
-}
+  data?: DeriveBannerData
+} | false
 
-export type EmitFile =
-  | { path: string; content: string; banner?: false | BannerConfig }
-  | { path: string; type: 'delete'; banner?: false | BannerConfig }
+export type DeriveFile =
+  | { path: string; content: string; banner?: DeriveBanner }
+  | { path: string; type: 'delete'; banner?: DeriveBanner }
 
-export type EmitResult = {
-  files: EmitFile[]
-  banner?: false | BannerConfig
+export type DeriveResult = {
+  files: DeriveFile[]
+  banner?: DeriveBanner
 }
 
 export type Promisable<T> = T | Promise<T>
@@ -107,11 +107,11 @@ export type DerivePluginOptions = {
   /**
    * 接收 full/patch 事件，返回要写入/删除的文件列表。
    */
-  derive: (event: DeriveEvent) => EmitResult | Promise<EmitResult>
+  derive: (event: DeriveEvent) => DeriveResult | Promise<DeriveResult>
   /**
    * 全局 banner 配置，支持被 EmitResult / EmitFile 覆盖。
    */
-  banner?: false | BannerConfig
+  banner?: DeriveBanner
   /**
    * 自动将输出文件加入 `root/.gitignore`。
    */

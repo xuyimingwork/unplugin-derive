@@ -1,9 +1,9 @@
-import type { BannerConfig } from '../types.js'
+import type { DeriveBanner } from '../types.js'
 
-export type ResolvedBanner = false | BannerConfig | undefined
+export type ResolvedBanner = false | DeriveBanner | undefined
 
 export function mergeBanner(
-  ...banners: Array<false | BannerConfig | undefined>
+  ...banners: Array<false | DeriveBanner | undefined>
 ): ResolvedBanner {
   let current: ResolvedBanner = undefined
   for (const banner of banners) {

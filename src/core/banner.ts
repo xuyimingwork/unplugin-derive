@@ -1,6 +1,6 @@
-import type { BannerConfig, BannerData, BannerOverviewNode, BannerRenderContext, BannerStyle } from '../types.js'
+import type { DeriveBanner, DeriveBannerData, BannerOverviewNode, BannerRenderContext, DeriveBannerStyle } from '../types.js'
 
-const DEFAULT_STYLE: BannerStyle = 'block-jsdoc'
+const DEFAULT_STYLE: DeriveBannerStyle = 'block-jsdoc'
 
 function toTextArray(value: unknown): string[] {
   if (value == null) return []
@@ -49,7 +49,7 @@ function renderTemplate(template: string, context: Record<string, unknown>): str
   })
 }
 
-function buildDefaultBody(data: BannerData): string {
+function buildDefaultBody(data: DeriveBannerData): string {
   const authors = toTextArray(data.author)
   if (!authors.length) return ''
   const sources = toTextArray(data.source)
@@ -73,7 +73,7 @@ function buildDefaultBody(data: BannerData): string {
   return lines.join('\n')
 }
 
-function wrapAsComment(body: string, style: BannerStyle): string {
+function wrapAsComment(body: string, style: DeriveBannerStyle): string {
   const normalizedBody = String(body).replace(/\r\n?/g, '\n')
   const escapedBody = style === 'block-star' || style === 'block-jsdoc'
     ? normalizedBody.replace(/\*\//g, '*\\/')
@@ -94,7 +94,7 @@ function wrapAsComment(body: string, style: BannerStyle): string {
 }
 
 export function renderBannerForFile(
-  banner: false | BannerConfig | undefined,
+  banner: DeriveBanner | undefined,
   {
     path,
     content
@@ -105,7 +105,7 @@ export function renderBannerForFile(
 ): string {
   if (!banner) return ''
   const style = banner.style ?? DEFAULT_STYLE
-  const data = (banner.data || {}) as BannerData
+  const data = (banner.data || {}) as DeriveBannerData
   const context: BannerRenderContext = { path, content, data, style }
   let body = ''
   if (banner.formatter) {

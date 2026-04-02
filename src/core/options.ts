@@ -4,7 +4,7 @@ import { ensureGitignoreEntries } from './gitignore.js'
 import { isPathWatched, isWithinRoot, normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path.js'
 import { createLoadResolver } from './load-resolver.js'
 import { mergeBanner } from './banner-merge.js'
-import type { DeriveBuildStartType, DerivePluginOptions, DeriveWatchChangeType, EmitResult, GitignoreMatcher, DeriveOptionLoadResolved } from '../types.js'
+import type { DeriveBuildStartType, DerivePluginOptions, DeriveWatchChangeType, DeriveResult, GitignoreMatcher, DeriveOptionLoadResolved } from '../types.js'
 
 export type DeriveWhenResolved = {
   buildStart: DeriveBuildStartType
@@ -17,7 +17,7 @@ export type ResolvedDeriveOptions = {
   log: (message: string) => void
   load: DeriveOptionLoadResolved
   derive: DerivePluginOptions['derive']
-  prepareGitignore: (result: EmitResult) => Promise<void>
+  prepareGitignore: (result: DeriveResult) => Promise<void>
   deriveWhen: DeriveWhenResolved
 }
 
@@ -137,7 +137,7 @@ function createDeriveResolver(
         return true
       })
     const resultBanner = mergeBanner(banner, result.banner)
-    const normalizedResult: EmitResult = {
+    const normalizedResult: DeriveResult = {
       ...result,
       banner: resultBanner,
       files: files.map(file => {
@@ -156,14 +156,14 @@ function createPrepareGitignore(
   root: string,
   gitignoreInput: DerivePluginOptions['gitignore'],
   log: (message: string) => void
-): (result: EmitResult) => Promise<void> {
+): (result: DeriveResult) => Promise<void> {
   const normalizedGitignore = normalizeGitignore(gitignoreInput, { log })
   const gitignore = normalizedGitignore?.matcher
   const gitignoreEntries = normalizedGitignore?.entries || []
   if (!gitignore && gitignoreEntries.length === 0) {
     return async () => {}
   }
-  return async (result: EmitResult) => {
+  return async (result: DeriveResult) => {
     const relPathsFromFiles = result.files
       .filter((file): file is { path: string; content: string } => 'content' in file)
       .map(file => toRelPath(root, file.path))

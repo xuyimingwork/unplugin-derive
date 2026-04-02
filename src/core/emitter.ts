@@ -1,6 +1,6 @@
 import { removeIfExists, writeIfChanged } from './fs.js'
 import { renderBannerForFile } from './banner.js'
-import type { EmitResult } from '../types.js'
+import type { DeriveResult } from '../types.js'
 
 export type EmitSummary = {
   written: number
@@ -9,7 +9,7 @@ export type EmitSummary = {
 }
 
 export async function emitResultFiles(
-  result: EmitResult,
+  result: DeriveResult,
 ): Promise<EmitSummary> {
   const summary: EmitSummary = {
     written: 0,
