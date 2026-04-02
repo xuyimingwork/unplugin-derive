@@ -27,7 +27,8 @@ function normalizeRoot(rootInput: DerivePluginOptions['root']): string {
 
 function normalizeWatch(watchInput: DerivePluginOptions['watch'], root: string): string[] {
   const watchRel = (Array.isArray(watchInput) ? watchInput : [watchInput])
-    .map(v => String(v).trim())
+    .filter((v): v is string => typeof v === 'string')
+    .map(v => v.trim())
     .filter(Boolean)
   if (!watchRel.length) throw new Error('`watch` must contain at least one non-empty pattern.')
   return watchRel.map(pattern => {
@@ -84,7 +85,8 @@ function normalizeGitignore(
     }
   }
   const entries = (Array.isArray(gitignoreInput) ? gitignoreInput : [gitignoreInput])
-    .map(v => normalizeSlashes(String(v).trim()))
+    .filter((v): v is string => typeof v === 'string')
+    .map(v => normalizeSlashes(v.trim()))
     .filter(Boolean)
   return {
     matcher: undefined,

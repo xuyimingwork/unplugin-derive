@@ -20,6 +20,33 @@ describe('resolveOptions', () => {
     ).toThrowError('`watch` must contain at least one non-empty pattern.')
   })
 
+  it('should throw when watch patterns are blank', () => {
+    expect(() =>
+      resolveOptions({
+        watch: '   ',
+        derive: async () => ({ files: [] })
+      })
+    ).toThrowError('`watch` must contain at least one non-empty pattern.')
+
+    expect(() =>
+      resolveOptions({
+        watch: ['  ', '\n\t'],
+        derive: async () => ({ files: [] })
+      })
+    ).toThrowError('`watch` must contain at least one non-empty pattern.')
+  })
+
+  it('should ignore non-string watch entries at runtime (defensive)', () => {
+    const root = '/tmp/project'
+    const { watch } = resolveOptions({
+      root,
+      watch: ['src/**/*.ts', null, undefined, ''] as any,
+      derive: async () => ({ files: [] })
+    })
+
+    expect(watch).toEqual(['/tmp/project/src/**/*.ts'])
+  })
+
   it('should normalize watch patterns when resolving options', () => {
     const root = '/tmp/project'
     const { watch } = resolveOptions({
@@ -326,5 +353,33 @@ describe('resolveOptions', () => {
     })
     const content = await fs.promises.readFile(path.join(root, '.gitignore'), 'utf8')
     expect(content).toBe('generated/static.txt\n')
+  })
+
+  it('should ignore empty gitignore entries', async () => {
+    const root = await createTempRoot('derive-options-gitignore-empty')
+    tempDirs.push(root)
+    const { prepareGitignore } = resolveOptions({
+      root,
+      watch: 'src/**/*.ts',
+      gitignore: ['generated/ok.txt', '', '  '],
+      derive: async () => ({ files: [] })
+    })
+    await prepareGitignore({ files: [] })
+    const content = await fs.promises.readFile(path.join(root, '.gitignore'), 'utf8')
+    expect(content).toBe('generated/ok.txt\n')
+  })
+
+  it('should ignore non-string gitignore entries at runtime (defensive)', async () => {
+    const root = await createTempRoot('derive-options-gitignore-non-string')
+    tempDirs.push(root)
+    const { prepareGitignore } = resolveOptions({
+      root,
+      watch: 'src/**/*.ts',
+      gitignore: ['generated/ok.txt', null, undefined] as any,
+      derive: async () => ({ files: [] })
+    })
+    await prepareGitignore({ files: [] })
+    const content = await fs.promises.readFile(path.join(root, '.gitignore'), 'utf8')
+    expect(content).toBe('generated/ok.txt\n')
   })
 })
