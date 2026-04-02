@@ -1,7 +1,8 @@
-import type { DeriveBanner, DeriveOptionDerive, DeriveResolved, DeriveOptions, DeriveResult, DeriveResultFile } from '../types.js'
+import type { DeriveBanner, DeriveEvent, DeriveOptionDerive, DeriveResultFile, DeriveResultResolved } from '../types.js'
 import { normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path.js'
-import type { DeriveEvent } from '../types.js'
 import { getBanner } from './banner.js'
+
+export type DeriveResolved = (event: DeriveEvent) => Promise<DeriveResultResolved>
 
 function isDeleteDeriveFile(file: DeriveResultFile): file is Extract<DeriveResultFile, { type: 'delete' }> {
   return 'type' in file && file.type === 'delete'

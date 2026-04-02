@@ -2,7 +2,8 @@ import fg from 'fast-glob'
 import { createEmit } from './emitter.js'
 import { createPrepareGitignore } from './gitignore-resolver.js'
 import { isPathWatched, normalizeIncomingAbsPath } from './path.js'
-import type { DeriveChange, DeriveEvent, DeriveOptionLoadResolved } from '../types.js'
+import type { DeriveChange, DeriveEvent } from '../types.js'
+import type { DeriveOptionLoadResolved } from './load-resolver.js'
 import type { DeriveOptionsResolved } from './options.js'
 import type { DeriveTask } from './queue.js'
 import type { Emit } from './emitter.js'
@@ -14,6 +15,8 @@ export type DeriveContext = {
   postDerive: (result: Parameters<Emit>[0]) => Promise<void>
   emit: Emit
 }
+
+type RuntimeHooks = Pick<DeriveContext, 'postDerive' | 'emit'>
 
 async function getWatchedFiles(watches: string[]): Promise<string[]> {
   const files = await fg(watches, { onlyFiles: true, absolute: true })
@@ -52,22 +55,49 @@ async function loadChanges(changes: DeriveChange[], load: DeriveOptionLoadResolv
 }
 
 export function createDeriveContext(options: DeriveOptionsResolved): DeriveContext {
-  const { root, watch, log, load, derive, gitignore } = options
-  const postDerive = createPrepareGitignore(gitignore, { root, watch, log })
-  const emit = createEmit({ root, watch, log })
+  const hooks = createRuntimeHooks(options)
+  const { log, derive } = options
+  const load = createTaskLoad(options)
   return {
     log,
     derive,
-    postDerive,
-    emit,
-    async load(task) {
-      const rawChanges = task.type === 'full'
-        ? await getFullChanges(watch)
-        : filterWatchedChanges(watch, normalizePatchChanges(root, task.changes))
-      return {
-        type: task.type,
-        changes: await loadChanges(rawChanges, load)
-      }
+    ...hooks,
+    load
+  }
+}
+
+function createRuntimeHooks(options: DeriveOptionsResolved): RuntimeHooks {
+  const { root, watch, log, gitignore } = options
+  return {
+    postDerive: createPrepareGitignore(gitignore, { root, watch, log }),
+    emit: createEmit({ root, watch, log })
+  }
+}
+
+function createTaskLoad(options: DeriveOptionsResolved): DeriveContext['load'] {
+  const { root, watch, log, load } = options
+  return async task => {
+    const rawChanges = task.type === 'full'
+      ? await getFullChanges(watch)
+      : getPatchChanges(task.changes, { root, watch, log })
+    return {
+      type: task.type,
+      changes: await loadChanges(rawChanges, load)
     }
   }
+}
+
+function getPatchChanges(
+  changes: DeriveChange[],
+  { root, watch, log }: { root: string; watch: string[]; log: (message: string) => void }
+): DeriveChange[] {
+  const normalizedChanges = normalizePatchChanges(root, changes)
+  if (normalizedChanges.length !== changes.length) {
+    log(`skip patch changes outside root (${changes.length - normalizedChanges.length}/${changes.length})`)
+  }
+  const watchedChanges = filterWatchedChanges(watch, normalizedChanges)
+  if (watchedChanges.length !== normalizedChanges.length) {
+    log(`skip patch changes not watched (${normalizedChanges.length - watchedChanges.length}/${normalizedChanges.length})`)
+  }
+  return watchedChanges
 }

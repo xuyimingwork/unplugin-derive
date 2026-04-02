@@ -3,7 +3,9 @@ import { PLUGIN_NAME } from './constants.js'
 import { normalizeRelPath, normalizeSlashes, toRelPath } from './path.js'
 import { createLoadResolver } from './load-resolver.js'
 import { createDeriveResolver } from './derive-resolver.js'
-import type { DeriveBanner, DeriveBuildStartType, DeriveOptionGitignore, DeriveOptions, DeriveWatchChangeType, DeriveOptionLoadResolved, DeriveResolved } from '../types.js'
+import type { DeriveBuildStartType, DeriveOptionGitignore, DeriveOptions, DeriveWatchChangeType } from '../types.js'
+import type { DeriveOptionLoadResolved } from './load-resolver.js'
+import type { DeriveResolved } from './derive-resolver.js'
 
 export type DeriveWhenResolved = {
   buildStart: DeriveBuildStartType
@@ -16,7 +18,6 @@ export type DeriveOptionsResolved = {
   log: (message: string) => void
   load: DeriveOptionLoadResolved
   derive: DeriveResolved
-  banner?: DeriveBanner
   gitignore?: DeriveOptionGitignore
   deriveWhen: DeriveWhenResolved
 }
@@ -70,6 +71,6 @@ export function resolveOptions(userOptions: DeriveOptions): DeriveOptionsResolve
     root,
     banner: userOptions.banner,
   })
-  return { root, watch, log, load, derive, banner: userOptions.banner, gitignore: userOptions.gitignore, deriveWhen }
+  return { root, watch, log, load, derive, gitignore: userOptions.gitignore, deriveWhen }
 }
 

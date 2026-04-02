@@ -18,7 +18,6 @@ export type DeriveEvent =
     }
 
 export type DeriveOptionDerive = (event: DeriveEvent) => Promisable<DeriveResult>
-export type DeriveResolved = (event: DeriveEvent) => Promise<DeriveResultResolved>
 
 export type DeriveBannerStyle = 'line-slash' | 'line-hash' | 'block-star' | 'block-jsdoc'
 
@@ -81,13 +80,6 @@ export type DeriveLoaderBase = (path: string) => Promisable<DeriveLoaderResult>
 export type DeriveLoader = DeriveLoaderBase | DeriveLoaderBuiltin
 export type DeriveLoadRouter = (path: string) => Promisable<DeriveLoaderBuiltin | DeriveLoader[]>
 export type DeriveOptionLoad = DeriveLoader | DeriveLoader[] | DeriveLoadRouter
-export type DeriveOptionLoadResolved = (path: string) => Promise<DeriveLoaderResult>
-
-// Backward-compatible aliases used by internal runtime.
-export type LoadContentResult = Exclude<DeriveLoaderResult, undefined>
-export type LoadContentFactory = DeriveLoaderBase
-export type LoadMethod = DeriveLoader | LegacyBuiltinLoadType
-export type LoadResult = DeriveLoaderResult | DeriveLoader | DeriveLoader[] | LegacyBuiltinLoadType | LoadMethod[]
 
 export type GitignoreMatcher = (file: string) => boolean
 export type DeriveOptionGitignore = true | string | string[] | GitignoreMatcher

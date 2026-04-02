@@ -7,8 +7,9 @@ import type {
   DeriveLoaderBase,
   DeriveLoaderBuiltin,
   DeriveLoaderResult,
-  DeriveOptionLoadResolved,
 } from '../types.js'
+
+export type DeriveOptionLoadResolved = (path: string) => Promise<DeriveLoaderResult>
 
 const LEGACY_BUILTIN_LOADER_NAMES = ['text', 'json', 'buffer', 'import'] as const
 
