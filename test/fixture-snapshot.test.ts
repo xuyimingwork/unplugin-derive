@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+import { createDeriveContext } from '../src/core/context.ts'
 import { resolveOptions } from '../src/core/options.ts'
 import { createDeriveRuntime } from '../src/core/runtime.ts'
 import type { BuiltinLoadType } from '../src/types.ts'
@@ -101,7 +102,7 @@ describe('fixtures snapshots', () => {
 
     await applyMutations(root, fixtureCase.mutateBeforeRun ?? [])
 
-    const runtime = createDeriveRuntime(resolveOptions({
+    const runtime = createDeriveRuntime(createDeriveContext(resolveOptions({
       root,
       watch: fixtureCase.watch,
       load: async filePath => resolveFixtureLoader(filePath, fixtureCase),
@@ -112,7 +113,7 @@ describe('fixtures snapshots', () => {
         }))
         return { files }
       }
-    }))
+    })))
 
     for (const step of fixtureCase.run) {
       if (step.type === 'full') {

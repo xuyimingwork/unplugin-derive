@@ -1,19 +1,19 @@
 import { createUnplugin } from 'unplugin'
+import { createDeriveContext } from './core/context.js'
 import { resolveOptions } from './core/options.js'
-import { isPathWatched, normalizeIncomingAbsPath } from './core/path.js'
 import { createDeriveRuntime } from './core/runtime.js'
-import type { DeriveChangeType, DerivePluginOptions } from './types.js'
+import type { DeriveChangeType, DeriveOptions } from './types.js'
 
 function mapWatchEventType(event: unknown): DeriveChangeType {
   if (event === 'create' || event === 'update' || event === 'delete') return event
   return 'unknown'
 }
 
-export const unpluginDerive = createUnplugin<DerivePluginOptions | undefined>(
+export const unpluginDerive = createUnplugin<DeriveOptions | undefined>(
   userOptions => {
     if (!userOptions) throw new Error('unplugin-derive options are required.')
     const options = resolveOptions(userOptions)
-    const runtime = createDeriveRuntime(options)
+    const runtime = createDeriveRuntime(createDeriveContext(options))
     return {
       name: 'unplugin-derive',
       buildStart() {
@@ -22,15 +22,6 @@ export const unpluginDerive = createUnplugin<DerivePluginOptions | undefined>(
       },
       watchChange(id: string, change?: { event?: string }) {
         if (options.deriveWhen.watchChange === 'none') return
-        const absPath = normalizeIncomingAbsPath(options.root, id)
-        if (!absPath) {
-          options.log(`skip watchChange (invalid path): ${id}`)
-          return
-        }
-        if (!isPathWatched(absPath, options.watch)) {
-          options.log(`skip watchChange (not watched): ${id}`)
-          return
-        }
         if (options.deriveWhen.watchChange === 'full') {
           return runtime.run({ type: 'full', changes: [] })
         }
@@ -57,5 +48,5 @@ export const rollup = unpluginDerive.rollup
 export const webpack = unpluginDerive.webpack
 export const esbuild = unpluginDerive.esbuild
 
-export type { DerivePluginOptions } from './types.js'
+export type { DeriveOptions as DerivePluginOptions } from './types.js'
 

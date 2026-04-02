@@ -1,34 +1,31 @@
 import path from 'node:path'
 import { PLUGIN_NAME } from './constants.js'
-import { createPrepareGitignore } from './gitignore-resolver.js'
-import { createEmit } from './emitter.js'
 import { normalizeRelPath, normalizeSlashes, toRelPath } from './path.js'
 import { createLoadResolver } from './load-resolver.js'
 import { createDeriveResolver } from './derive-resolver.js'
-import type { DeriveBuildStartType, DerivePluginOptions, DeriveWatchChangeType, DeriveOptionLoadResolved, DeriveResolved, DeriveResult } from '../types.js'
-import type { Emit } from './emitter.js'
+import type { DeriveBanner, DeriveBuildStartType, DeriveOptionGitignore, DeriveOptions, DeriveWatchChangeType, DeriveOptionLoadResolved, DeriveResolved } from '../types.js'
 
 export type DeriveWhenResolved = {
   buildStart: DeriveBuildStartType
   watchChange: DeriveWatchChangeType
 }
 
-export type ResolvedDeriveOptions = {
+export type DeriveOptionsResolved = {
   root: string
   watch: string[]
   log: (message: string) => void
   load: DeriveOptionLoadResolved
   derive: DeriveResolved
-  prepareGitignore: (result: DeriveResult) => Promise<void>
-  emit: Emit
+  banner?: DeriveBanner
+  gitignore?: DeriveOptionGitignore
   deriveWhen: DeriveWhenResolved
 }
 
-function normalizeRoot(rootInput: DerivePluginOptions['root']): string {
+function normalizeRoot(rootInput: DeriveOptions['root']): string {
   return path.resolve(rootInput ?? process.cwd())
 }
 
-function normalizeWatch(watchInput: DerivePluginOptions['watch'], root: string): string[] {
+function normalizeWatch(watchInput: DeriveOptions['watch'], root: string): string[] {
   const watchRel = (Array.isArray(watchInput) ? watchInput : [watchInput])
     .filter((v): v is string => typeof v === 'string')
     .map(v => v.trim())
@@ -42,11 +39,11 @@ function normalizeWatch(watchInput: DerivePluginOptions['watch'], root: string):
   })
 }
 
-function normalizeVerbose(verboseInput: DerivePluginOptions['verbose']): boolean {
+function normalizeVerbose(verboseInput: DeriveOptions['verbose']): boolean {
   return verboseInput === true
 }
 
-function normalizeDeriveWhen(deriveWhenInput: DerivePluginOptions['deriveWhen']): DeriveWhenResolved {
+function normalizeDeriveWhen(deriveWhenInput: DeriveOptions['deriveWhen']): DeriveWhenResolved {
   return {
     buildStart: deriveWhenInput?.buildStart ?? 'full',
     watchChange: deriveWhenInput?.watchChange ?? 'patch'
@@ -59,7 +56,7 @@ function createLogger(verbose: boolean): (message: string) => void {
   }
 }
 
-export function resolveOptions(userOptions: DerivePluginOptions): ResolvedDeriveOptions {
+export function resolveOptions(userOptions: DeriveOptions): DeriveOptionsResolved {
   if (typeof userOptions.derive !== 'function') {
     throw new Error('`derive` is required and must be a function.')
   }
@@ -69,12 +66,10 @@ export function resolveOptions(userOptions: DerivePluginOptions): ResolvedDerive
   const deriveWhen = normalizeDeriveWhen(userOptions.deriveWhen)
   const log = createLogger(verbose)
   const load = createLoadResolver(userOptions.load, { root, log })
-  const prepareGitignore = createPrepareGitignore(userOptions.gitignore, { root, watch, log })
-  const emit = createEmit({ root, watch, log })
   const derive = createDeriveResolver(userOptions.derive, {
     root,
     banner: userOptions.banner,
   })
-  return { root, watch, log, load, derive, prepareGitignore, emit, deriveWhen }
+  return { root, watch, log, load, derive, banner: userOptions.banner, gitignore: userOptions.gitignore, deriveWhen }
 }
 

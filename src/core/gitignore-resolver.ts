@@ -1,7 +1,7 @@
 import { ensureGitignoreEntries } from './gitignore.js'
 import { filterEmittableFiles } from './emitter.js'
 import { normalizeSlashes, toRelPath } from './path.js'
-import type { DerivePluginOptions, DeriveResult, GitignoreMatcher } from '../types.js'
+import type { DeriveOptions, DeriveResult, GitignoreMatcher } from '../types.js'
 
 type NormalizedGitignore = {
   matcher: GitignoreMatcher | undefined
@@ -9,7 +9,7 @@ type NormalizedGitignore = {
 } | undefined
 
 function normalizeGitignore(
-  gitignoreInput: DerivePluginOptions['gitignore'],
+  gitignoreInput: DeriveOptions['gitignore'],
   {
     log
   }: {
@@ -44,7 +44,7 @@ function normalizeGitignore(
 }
 
 export function createPrepareGitignore(
-  gitignoreInput: DerivePluginOptions['gitignore'],
+  gitignoreInput: DeriveOptions['gitignore'],
   {
     log,
     root,

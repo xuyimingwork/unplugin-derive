@@ -1,4 +1,4 @@
-import type { DeriveBanner, DeriveOptionDerive, DeriveResolved, DerivePluginOptions, DeriveResult, DeriveResultFile } from '../types.js'
+import type { DeriveBanner, DeriveOptionDerive, DeriveResolved, DeriveOptions, DeriveResult, DeriveResultFile } from '../types.js'
 import { normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path.js'
 import type { DeriveEvent } from '../types.js'
 import { getBanner } from './banner.js'

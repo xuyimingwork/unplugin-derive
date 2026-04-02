@@ -98,7 +98,7 @@ export type DeriveWhen = {
   watchChange?: DeriveWatchChangeType
 }
 
-export type DerivePluginOptions = {
+export type DeriveOptions = {
   /**
    * 工程根目录，默认 `process.cwd()`
    */

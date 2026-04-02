@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createDeriveContext } from '../src/core/context.ts'
 import { resolveOptions } from '../src/core/options.ts'
 import { createTempRoot, removeDir } from './utils.ts'
 
@@ -329,24 +330,24 @@ describe('resolveOptions', () => {
   })
 
   it('should treat string array gitignore as static entries', () => {
-    const { prepareGitignore } = resolveOptions({
+    const { postDerive } = createDeriveContext(resolveOptions({
       watch: 'src/**/*.ts',
       gitignore: ['generated/api/types.d.ts', 'dist/output.txt'],
       derive: async () => ({ files: [] })
-    })
-    expect(typeof prepareGitignore).toBe('function')
+    }))
+    expect(typeof postDerive).toBe('function')
   })
 
   it('should prepare gitignore entries from static and emitted files', async () => {
     const root = await createTempRoot('derive-options-gitignore')
     tempDirs.push(root)
-    const { prepareGitignore } = resolveOptions({
+    const { postDerive } = createDeriveContext(resolveOptions({
       root,
       watch: 'src/**/*.ts',
       gitignore: ['generated/static.txt'],
       derive: async () => ({ files: [] })
-    })
-    await prepareGitignore({
+    }))
+    await postDerive({
       files: [
         { path: path.join(root, 'generated/dynamic.txt'), content: 'x' }
       ]
@@ -358,13 +359,13 @@ describe('resolveOptions', () => {
   it('should ignore empty gitignore entries', async () => {
     const root = await createTempRoot('derive-options-gitignore-empty')
     tempDirs.push(root)
-    const { prepareGitignore } = resolveOptions({
+    const { postDerive } = createDeriveContext(resolveOptions({
       root,
       watch: 'src/**/*.ts',
       gitignore: ['generated/ok.txt', '', '  '],
       derive: async () => ({ files: [] })
-    })
-    await prepareGitignore({ files: [] })
+    }))
+    await postDerive({ files: [] })
     const content = await fs.promises.readFile(path.join(root, '.gitignore'), 'utf8')
     expect(content).toBe('generated/ok.txt\n')
   })
@@ -372,13 +373,13 @@ describe('resolveOptions', () => {
   it('should ignore non-string gitignore entries at runtime (defensive)', async () => {
     const root = await createTempRoot('derive-options-gitignore-non-string')
     tempDirs.push(root)
-    const { prepareGitignore } = resolveOptions({
+    const { postDerive } = createDeriveContext(resolveOptions({
       root,
       watch: 'src/**/*.ts',
       gitignore: ['generated/ok.txt', null, undefined] as any,
       derive: async () => ({ files: [] })
-    })
-    await prepareGitignore({ files: [] })
+    }))
+    await postDerive({ files: [] })
     const content = await fs.promises.readFile(path.join(root, '.gitignore'), 'utf8')
     expect(content).toBe('generated/ok.txt\n')
   })
