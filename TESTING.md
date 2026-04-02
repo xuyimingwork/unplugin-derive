@@ -1,0 +1,75 @@
+# 测试
+
+使用 [Vitest](https://vitest.dev/)：
+
+```bash
+pnpm test        # watch 模式
+pnpm test:run    # 单次运行
+```
+
+当前测试分为两层：
+
+- `test/*.test.ts`：核心单元测试（`options` / `queue` / `runtime`）
+- `test/fixture-snapshot.test.ts`：fixture 驱动的快照集成测试
+
+## Fixture / Snapshot 测试约定
+
+fixture 放在 `test/fixtures/<case-name>`，测试会自动扫描每个子目录并执行。
+
+`case.json` 中 loader 配置统一使用 `loadByExtension`，按后缀映射到内置 loader。
+
+每个 fixture 通过 `case.json` 描述：
+
+```json
+{
+  "watch": "src/**/*.txt",
+  "loadByExtension": {
+    ".txt": "text",
+    ".json": "json"
+  },
+  "mutateBeforeRun": [
+    { "action": "write", "path": "src/a.txt", "content": "new content" },
+    { "action": "delete", "path": "src/b.txt" }
+  ],
+  "run": [
+    { "type": "full" },
+    {
+      "type": "patch",
+      "changes": [
+        { "type": "update", "path": "src/a.txt" },
+        { "type": "delete", "path": "src/b.txt" }
+      ]
+    }
+  ],
+  "deriveOutputs": [
+    { "path": "event.json", "from": "event-json" },
+    { "path": "deleted-log.txt", "from": "deleted-paths" }
+  ],
+  "snapshotDir": "generated"
+}
+```
+
+字段说明：
+
+- `watch`: 传给插件的监听 glob（字符串或字符串数组）
+- `loadByExtension`（可选）: 后缀到内置 loader 的映射，支持 `text` / `json` / `buffer` / `import`
+  - 如：`{ ".txt": "text", ".json": "json" }`
+- `mutateBeforeRun`（可选）: 运行前对 fixture 文件系统做变更
+  - `write`: 写文件（会自动创建目录）
+  - `delete`: 删文件
+- `run`: 测试执行步骤（按顺序）
+  - `full`: 触发一次 full 事件
+  - `patch`: 触发一次 patch 事件，`changes` 与运行时输入一致
+- `deriveOutputs`: 派生输出规则数组
+  - `path`: 输出文件路径（相对于 `snapshotDir`）
+  - `from`: 内容来源，当前支持：
+    - `event-json`: 输出完整事件 JSON
+    - `deleted-paths`: 输出 delete 变更的路径列表（换行分隔）
+- `snapshotDir`: 快照读取目录（相对 fixture 根目录）
+
+新增一个 fixture 的最小步骤：
+
+1. 新建 `test/fixtures/<case-name>/` 与输入文件
+2. 新建 `test/fixtures/<case-name>/case.json`
+3. 运行 `pnpm vitest run -u` 更新快照
+
