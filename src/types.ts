@@ -49,13 +49,13 @@ export type DeriveBanner = {
   data?: DeriveBannerData
 } | false
 
-export type DeriveFile =
+export type DeriveResultFile =
   | { path: string; content: string; banner?: DeriveBanner }
   | { path: string; type: 'delete' }
 
 
 export type DeriveResult = {
-  files: DeriveFile[]
+  files: DeriveResultFile[]
   banner?: DeriveBanner
 }
 
@@ -120,7 +120,7 @@ export type DerivePluginOptions = {
    */
   derive: DeriveOptionDerive
   /**
-   * 全局 banner 配置，支持被 EmitResult / EmitFile 覆盖。
+   * 全局 banner 配置，支持被 DeriveResult / DeriveResultFile 内的配置覆盖。
    */
   banner?: DeriveBanner
   /**

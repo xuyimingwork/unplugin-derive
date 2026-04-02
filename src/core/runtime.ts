@@ -1,5 +1,4 @@
 import fg from 'fast-glob'
-import { emitResultFiles } from './emitter.js'
 import { normalizeIncomingAbsPath } from './path.js'
 import { createTaskQueue } from './queue.js'
 import type { DeriveChange, DeriveEvent, DeriveOptionLoadResolved } from '../types.js'
@@ -46,14 +45,14 @@ async function loadChanges(
 }
 
 export function createDeriveRuntime(options: ResolvedDeriveOptions): Runtime {
-  const { root, watch, log, load, derive, prepareGitignore } = options
+  const { root, watch, log, load, derive, prepareGitignore, emit } = options
 
   async function executeTask(task: DeriveTask): Promise<void> {
     const startedAt = Date.now()
     let stage = 'resolve changes'
     try {
       const changes = task.type === 'full'
-        ? await getFullChanges(task.watches)
+        ? await getFullChanges(watch)
         : task.changes
       if (task.type === 'patch' && changes.length === 0) {
         log('skip derive task (patch has no changes)')
@@ -70,7 +69,7 @@ export function createDeriveRuntime(options: ResolvedDeriveOptions): Runtime {
       stage = 'prepare gitignore'
       await prepareGitignore(result)
       stage = 'emit files'
-      const summary = await emitResultFiles(result, { root, watch, log })
+      const summary = await emit(result)
       const elapsed = Date.now() - startedAt
       log(`done derive task (${task.type}) written=${summary.written}, deleted=${summary.deleted}, skipped=${summary.skipped}, duration=${elapsed}ms`)
     } catch (e: any) {
@@ -83,7 +82,7 @@ export function createDeriveRuntime(options: ResolvedDeriveOptions): Runtime {
 
   async function run(event: DeriveEvent): Promise<void> {
     if (event.type === 'full') {
-      await queue.schedule({ type: 'full', watches: watch })
+      await queue.schedule({ type: 'full' })
       return
     }
     await queue.schedule({ type: 'patch', changes: normalizePatchChanges(root, event.changes) })

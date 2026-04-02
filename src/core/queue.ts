@@ -3,7 +3,6 @@ import type { DeriveChange, DeriveChangeType } from '../types.js'
 export type DeriveTask =
   | {
       type: 'full'
-      watches: string[]
     }
   | {
       type: 'patch'

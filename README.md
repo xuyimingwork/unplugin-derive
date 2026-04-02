@@ -106,12 +106,12 @@ await build({
 
 ## 配置总览
 
-- **输入与触发**: `watch`、`deriveWhen`
-- **内容加载**: `load`
+- **通用配置**: `root`、`verbose`
+- **监听触发**: `watch`、`deriveWhen`
 - **派生输出**: `derive`
+- **内容加载**: `load`
 - **输出加工**: `banner`
-- **输出后处理**: `gitignore`
-- **通用项**: `root`、`verbose`
+- **后续处理**: `gitignore`
 
 ## 执行流程
 
@@ -120,11 +120,15 @@ await build({
 1. 收集变更（`full` 扫描 `watch`，`patch` 使用传入变更并做路径归一化）
 2. 依次执行 `load`，为每个 change 补充 `content` / `loader`（可选）
 3. 调用 `derive(event)`，拿到要写入/删除的 `files`
-4. 过滤非法输出（越界路径、命中 `watch` 的输出会被跳过）
-5. 按配置维护 `.gitignore`（如果启用）
-6. 最终执行文件写入/删除（包含 banner 合并与渲染）
+4. 按配置维护 `.gitignore`（如果启用，基于 `derive` 返回的 files 计算）
+5. 最终执行文件写入/删除（包含 banner 合并与渲染；在 emit 阶段会跳过越界路径与命中 `watch` 的输出）
 
 ## 按执行顺序的配置详解
+
+### 0) `root` 与 `verbose`（通用项）
+
+- `root`: 工程根目录（默认 `process.cwd()`）
+- `verbose`: 输出运行日志（默认 `false`）
 
 ### 1) `watch` 与 `deriveWhen`（何时触发）
 
@@ -232,24 +236,24 @@ Derive({
 
 ### 3) `derive`（如何产出文件）
 
-`derive` 是核心回调，签名为 `derive(event: DeriveEvent)`，返回 `EmitResult`：
+`derive` 是核心回调，签名为 `derive(event: DeriveEvent)`，返回 `DeriveResult`：
 
 - 通过 `event.changes` 读取本次输入
 - 返回 `files` 指定要写入或删除的目标文件
 - 输出路径会在内部做安全过滤（越界路径、命中 `watch` 的输出会被跳过）
 
-## 事件和返回值
+#### 事件和返回值
 
 - `DeriveEvent`
   - `type: "full" | "patch"`
   - `changes: Array<{ type, path, content?, loader? }>`
-- `EmitResult`
-  - `files: Array<{ path, content, banner? } | { path, type: "delete", banner? }>`
-  - `banner?: false | BannerConfig`
+- `DeriveResult`
+  - `files: Array<{ path, content, banner? } | { path, type: "delete" }>`
+  - `banner?: DeriveBanner`
 
 ### 4) `banner`（输出加工，可选）
 
-- 覆盖顺序：`DerivePluginOptions.banner` -> `EmitResult.banner` -> `EmitFile.banner`（后者覆盖前者）
+- 覆盖顺序：`DerivePluginOptions.banner` -> `DeriveResult.banner` -> `DeriveResultFile.banner`（后者覆盖前者）
 - `false` 也遵循同样规则，表示该层显式禁用
 - `data` 合并是**浅合并**：后者覆盖前者的同名 key（嵌套对象不会做深合并）
 - `style` 可选值：`line-slash` / `line-hash` / `block-star` / `block-jsdoc`
@@ -343,14 +347,9 @@ Derive({
 
 ### 5) `gitignore`（输出后处理，可选）
 
-- `true`: 将本次生成文件全部写入 `.gitignore`
+- `true`: 将本次生成的**可写入文件**（即带 `content` 的 file，且路径位于 `root` 内）写入 `.gitignore`
 - `string` / `string[]`: 直接作为 `.gitignore` 条目写入
 - `(file) => boolean`: 按文件相对路径过滤后写入
-
-### 6) `root` 与 `verbose`（通用项）
-
-- `root`: 工程根目录（默认 `process.cwd()`）
-- `verbose`: 输出运行日志（默认 `false`）
 
 ## 其它
 
