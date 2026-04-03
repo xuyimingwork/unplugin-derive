@@ -1,5 +1,6 @@
 import { ensureGitignoreEntries } from './gitignore.js'
 import { filterEmittableFiles } from './emitter.js'
+import { logger } from './logger.js'
 import { normalizeSlashes, toRelPath } from './path.js'
 import type { DeriveOptions, DeriveResult, GitignoreMatcher } from '@/types'
 
@@ -9,12 +10,7 @@ type NormalizedGitignore = {
 } | undefined
 
 function normalizeGitignore(
-  gitignoreInput: DeriveOptions['gitignore'],
-  {
-    log
-  }: {
-    log: (message: string) => void
-  }
+  gitignoreInput: DeriveOptions['gitignore']
 ): NormalizedGitignore {
   if (!gitignoreInput) return undefined
   if (gitignoreInput === true) {
@@ -26,7 +22,7 @@ function normalizeGitignore(
         try {
           return gitignoreInput(file) === true
         } catch (e: any) {
-          log(`gitignore matcher failed for ${file}: ${e?.message || e}`)
+          logger.gitignore.error(`gitignore matcher failed for ${file}: ${e?.message || e}`)
           return false
         }
       },
@@ -46,16 +42,14 @@ function normalizeGitignore(
 export function createPrepareGitignore(
   gitignoreInput: DeriveOptions['gitignore'],
   {
-    log,
     root,
     watch
   }: {
-    log: (message: string) => void
     root: string
     watch: string[]
   }
 ): (result: DeriveResult) => Promise<void> {
-  const normalizedGitignore = normalizeGitignore(gitignoreInput, { log })
+  const normalizedGitignore = normalizeGitignore(gitignoreInput)
   const gitignore = normalizedGitignore?.matcher
   const gitignoreEntries = normalizedGitignore?.entries || []
   if (!gitignore && gitignoreEntries.length === 0) {
@@ -64,22 +58,27 @@ export function createPrepareGitignore(
   return async (result: DeriveResult) => {
     const files = Array.isArray(result.files) ? result.files : []
     const { emittable } = filterEmittableFiles(files, { root, watch })
+    logger.gitignore.debug(`matched emittable files for gitignore: ${emittable.length}`)
     const relPathsFromFiles = emittable
       .filter((file): file is { path: string; content: string } => 'content' in file)
       .map(file => toRelPath(root, file.path))
       .filter(Boolean)
-    const matched = gitignore ? relPathsFromFiles.filter(relPath => gitignore(relPath)) : []
+    const matched = gitignore ? relPathsFromFiles.filter(relPath => {
+      const resultMatch = gitignore(relPath)
+      logger.gitignore.debug(`gitignore matcher ${resultMatch ? 'kept' : 'skipped'} ${relPath}`)
+      return resultMatch
+    }) : []
     const entries = [...gitignoreEntries, ...matched]
     if (entries.length === 0) {
-      log('skip .gitignore update (no matched entries)')
+      logger.gitignore.info('skip .gitignore update (no matched entries)')
       return
     }
     const summary = await ensureGitignoreEntries(root, entries)
     if (summary.appended.length === 0) {
-      log(`skip .gitignore update (already present, checked ${summary.requested} entries)`)
+      logger.gitignore.info(`skip .gitignore update (already present, checked ${summary.requested} entries)`)
       return
     }
-    log(`updated .gitignore entries (${summary.appended.length}/${summary.requested})`)
+    logger.gitignore.info(`updated .gitignore entries (${summary.appended.length}/${summary.requested})`)
   }
 }
 

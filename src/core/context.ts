@@ -1,4 +1,5 @@
 import fg from 'fast-glob'
+import { logger } from './logger.js'
 import { createEmit } from './emitter'
 import { createPrepareGitignore } from './gitignore-resolver'
 import { isPathWatched, normalizeIncomingAbsPath } from './path'
@@ -9,7 +10,6 @@ import type { DeriveTask } from './queue'
 import type { Emit } from './emitter'
 
 export type DeriveContext = {
-  log: (message: string) => void
   load: (task: DeriveTask) => Promise<DeriveEvent>
   derive: DeriveOptionsResolved['derive']
   postDerive: (result: Parameters<Emit>[0]) => Promise<void>
@@ -56,10 +56,9 @@ async function loadChanges(changes: DeriveChange[], load: DeriveOptionLoadResolv
 
 export function createDeriveContext(options: DeriveOptionsResolved): DeriveContext {
   const hooks = createRuntimeHooks(options)
-  const { log, derive } = options
+  const { derive } = options
   const load = createTaskLoad(options)
   return {
-    log,
     derive,
     ...hooks,
     load
@@ -67,37 +66,40 @@ export function createDeriveContext(options: DeriveOptionsResolved): DeriveConte
 }
 
 function createRuntimeHooks(options: DeriveOptionsResolved): RuntimeHooks {
-  const { root, watch, log, gitignore } = options
+  const { root, watch, gitignore } = options
   return {
-    postDerive: createPrepareGitignore(gitignore, { root, watch, log }),
-    emit: createEmit({ root, watch, log })
+    postDerive: createPrepareGitignore(gitignore, { root, watch }),
+    emit: createEmit({ root, watch })
   }
 }
 
 function createTaskLoad(options: DeriveOptionsResolved): DeriveContext['load'] {
-  const { root, watch, log, load } = options
+  const { root, watch, load } = options
   return async task => {
     const rawChanges = task.type === 'full'
       ? await getFullChanges(watch)
-      : getPatchChanges(task.changes, { root, watch, log })
+      : getPatchChanges(task.changes, { root, watch })
+    logger.context.debug(`task ${task.type} rawChanges count: ${rawChanges.length}`)
+    const loaded = await loadChanges(rawChanges, load)
+    logger.context.debug(`task ${task.type} loaded changes count: ${loaded.length}`)
     return {
       type: task.type,
-      changes: await loadChanges(rawChanges, load)
+      changes: loaded
     }
   }
 }
 
 function getPatchChanges(
   changes: DeriveChange[],
-  { root, watch, log }: { root: string; watch: string[]; log: (message: string) => void }
+  { root, watch }: { root: string; watch: string[] }
 ): DeriveChange[] {
   const normalizedChanges = normalizePatchChanges(root, changes)
   if (normalizedChanges.length !== changes.length) {
-    log(`skip patch changes outside root (${changes.length - normalizedChanges.length}/${changes.length})`)
+    logger.context.info(`skip patch changes outside root (${changes.length - normalizedChanges.length}/${changes.length})`)
   }
   const watchedChanges = filterWatchedChanges(watch, normalizedChanges)
   if (watchedChanges.length !== normalizedChanges.length) {
-    log(`skip patch changes not watched (${normalizedChanges.length - watchedChanges.length}/${normalizedChanges.length})`)
+    logger.context.info(`skip patch changes not watched (${normalizedChanges.length - watchedChanges.length}/${normalizedChanges.length})`)
   }
   return watchedChanges
 }

@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { PLUGIN_NAME } from './constants'
+import { setLoggerLevel } from './logger'
 import { normalizeRelPath, normalizeSlashes } from './path'
 import { createLoadResolver } from './load-resolver'
 import { createDeriveResolver } from './derive-resolver'
@@ -15,7 +15,6 @@ export type DeriveWhenResolved = {
 export type DeriveOptionsResolved = {
   root: string
   watch: string[]
-  log: (message: string) => void
   load: DeriveOptionLoadResolved
   derive: DeriveResolved
   gitignore?: DeriveOptionGitignore
@@ -40,10 +39,6 @@ function normalizeWatch(watchInput: DeriveOptions['watch'], root: string): strin
   })
 }
 
-function normalizeVerbose(verboseInput: DeriveOptions['verbose']): boolean {
-  return verboseInput === true
-}
-
 function normalizeDeriveWhen(deriveWhenInput: DeriveOptions['deriveWhen']): DeriveWhenResolved {
   return {
     buildStart: deriveWhenInput?.buildStart ?? 'full',
@@ -51,26 +46,21 @@ function normalizeDeriveWhen(deriveWhenInput: DeriveOptions['deriveWhen']): Deri
   }
 }
 
-function createLogger(verbose: boolean): (message: string) => void {
-  return message => {
-    if (verbose) console.warn(`[${PLUGIN_NAME}] ${message}`)
-  }
-}
-
 export function resolveOptions(userOptions: DeriveOptions): DeriveOptionsResolved {
   if (typeof userOptions.derive !== 'function') {
     throw new Error('`derive` is required and must be a function.')
   }
+
+  setLoggerLevel(userOptions.debug)
+
   const root = normalizeRoot(userOptions.root)
   const watch = normalizeWatch(userOptions.watch, root)
-  const verbose = normalizeVerbose(userOptions.verbose)
   const deriveWhen = normalizeDeriveWhen(userOptions.deriveWhen)
-  const log = createLogger(verbose)
-  const load = createLoadResolver(userOptions.load, { root, log })
+  const load = createLoadResolver(userOptions.load, { root })
   const derive = createDeriveResolver(userOptions.derive, {
     root,
     banner: userOptions.banner,
   })
-  return { root, watch, log, load, derive, gitignore: userOptions.gitignore, deriveWhen }
+  return { root, watch, load, derive, gitignore: userOptions.gitignore, deriveWhen }
 }
 

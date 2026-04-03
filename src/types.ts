@@ -100,9 +100,14 @@ export type DeriveOptions = {
    */
   watch: string | string[]
   /**
-   * 为 true 时打印运行日志
+   * 启用日志级别：
+   * - error：仅输出错误信息（默认），包括加载、生成、输出失败等。
+   * - info：输出错误 + 关键操作消息，包括任务调度、watchChange/buildStart、derive 成果等。
+   * - debug：输出 info + 详细跟踪，可观察内部合并、转换、路径筛选等流程。
+   *
+   * 同时支持 `DEBUG` 环境变量进行更细粒度组合（例如 `DEBUG=unplugin-derive:*`）。
    */
-  verbose?: boolean
+  debug?: 'error' | 'info' | 'debug'
   /**
    * 根据文件路径决定是否加载内容，并如何加载。
    */

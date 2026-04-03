@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import { pathToFileURL } from 'node:url'
+import { logger } from './logger.js'
 import { toRelPath } from './path.js'
 import type {
   DeriveOptionLoad,
@@ -53,7 +54,6 @@ function toDeriveLoaderBases(
   rawLoaders: unknown,
   context: {
     root: string
-    log: (message: string) => void
   }
 ): DeriveLoaderBase[] | undefined {
   return (Array.isArray(rawLoaders) ? rawLoaders : [rawLoaders]).map(loader =>
@@ -62,8 +62,7 @@ function toDeriveLoaderBases(
 }
 
 function createDeriveLoad(
-  loaders?: DeriveLoaderBase[],
-  log: (message: string) => void = () => {}
+  loaders?: DeriveLoaderBase[]
 ): (path: string) => Promise<DeriveLoaderResult> {
   // 没有指定加载器，不加载文件内容
   if (!loaders || loaders.length === 0) return async () => undefined
@@ -75,11 +74,11 @@ function createDeriveLoad(
         // undefined 表示 loader 无法处理，交由下一个 loader 处理
         if (isObjectWithContent(result)) return result
       } catch (e: any) {
-        log(`load try failed for ${path}: ${e?.message || e}`)
+        logger.load.debug(`load try failed for ${path}: ${e?.message || e}`)
       }
     }
     // 所有加载器尝试完毕，无法加载
-    log(`load failed for ${path}`)
+    logger.load.error(`load failed for ${path}`)
     return undefined
   }
 }
@@ -88,15 +87,13 @@ export function createLoadResolver(
   load: DeriveOptionLoad | undefined,
   {
     root,
-    log,
   }: {
     root: string
-    log: (message: string) => void
   }
 ): DeriveOptionLoadResolved {
   if (!load) return createDeriveLoad()
 
-  if (typeof load !== 'function') return createDeriveLoad(toDeriveLoaderBases(load, { root, log }), log)
+  if (typeof load !== 'function') return createDeriveLoad(toDeriveLoaderBases(load, { root }))
   
   return async path => {
     let raw
@@ -105,10 +102,10 @@ export function createLoadResolver(
       // 如果是普通加载器
       if (isDeriveLoaderResult(raw)) return raw
     } catch (e: any) {
-      log(`load failed for ${path}: ${e?.message || e}`)
+      logger.load.error(`load failed for ${path}: ${e?.message || e}`)
       return undefined
     }
     // 如果是路由
-    return await createDeriveLoad(toDeriveLoaderBases(raw, { root, log }), log)(path)
+    return await createDeriveLoad(toDeriveLoaderBases(raw, { root }))(path)
   }
 }

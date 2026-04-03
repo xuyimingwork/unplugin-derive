@@ -1,3 +1,4 @@
+import { logger } from './logger.js'
 import type { DeriveBanner, DeriveEvent, DeriveOptionDerive, DeriveResultFile, DeriveResultResolved } from '@/types'
 import { normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path'
 import { getBanner } from './banner/banner'
@@ -19,30 +20,45 @@ export function createDeriveResolver(
   }
 ): DeriveResolved {
   return async (event: DeriveEvent) => {
-    const derived = await derive({
-      ...event,
-      changes: event.changes.map(change => ({
-        ...change,
-        path: toRelPath(root, change.path)
-      }))
-    })
-
-    if (!derived || typeof derived !== 'object') return { files: [] }
-    if (!Array.isArray(derived.files) || !derived.files.length) return { files: [] }
-
-    return {
-      files: derived.files.map(file => {
-        const path = normalizeSlashes(toAbsPath(root, normalizeRelPath(file.path)))
-        if (isDeleteDeriveFile(file)) return { ...file, path }
-        const prefix = getBanner(
-          [banner, derived.banner, file.banner],
-          { path: file.path, content: file.content }
-        )
-        return {
-          path, 
-          content: `${prefix}${file.content}`
-        }
+    logger.runtime.info(`derive called: ${event.type} (${event.changes.length} changes)`)
+    try {
+      const derived = await derive({
+        ...event,
+        changes: event.changes.map(change => ({
+          ...change,
+          path: toRelPath(root, change.path)
+        }))
       })
+
+      if (!derived || typeof derived !== 'object') {
+        logger.runtime.info('derive returned empty or invalid result')
+        return { files: [] }
+      }
+      if (!Array.isArray(derived.files) || !derived.files.length) {
+        logger.runtime.info('derive returned empty file list')
+        return { files: [] }
+      }
+
+      const result = {
+        files: derived.files.map(file => {
+          const path = normalizeSlashes(toAbsPath(root, normalizeRelPath(file.path)))
+          if (isDeleteDeriveFile(file)) return { ...file, path }
+          const prefix = getBanner(
+            [banner, derived.banner, file.banner],
+            { path: file.path, content: file.content }
+          )
+          return {
+            path,
+            content: `${prefix}${file.content}`
+          }
+        })
+      }
+
+      logger.runtime.info(`derive resolved ${result.files.length} files`) 
+      return result
+    } catch (error: any) {
+      logger.runtime.error(`derive failed: ${error?.message || error}`)
+      throw error
     }
   }
 }

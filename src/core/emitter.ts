@@ -1,4 +1,5 @@
 import type { DeriveResult, DeriveResultFile } from '@/types'
+import { logger } from './logger.js'
 import { removeIfExists, writeIfChanged } from './fs'
 import { isPathWatched, isWithinRoot, toRelPath } from './path'
 
@@ -52,12 +53,10 @@ export type Emit = (result: DeriveResult) => Promise<EmitSummary>
 
 export function createEmit({
   root,
-  watch,
-  log
+  watch
 }: {
   root: string
   watch: string[]
-  log: (message: string) => void
 }): Emit {
   return async (result: DeriveResult) => {
     const summary: EmitSummary = {
@@ -66,24 +65,30 @@ export function createEmit({
       skipped: 0
     }
     const files = Array.isArray(result.files) ? result.files : []
+    logger.emit.debug(`emitter input files count: ${files.length}`)
     const { emittable, skipped } = filterEmittableFiles(files, { root, watch })
+    logger.emit.debug(`emitter emittable count: ${emittable.length}, skipped count: ${skipped.length}`)
     for (const s of skipped) {
       if (s.reason === 'outside-root') {
-        log(`skip emit ${s.file.path} (outside root)`)
+        logger.emit.info(`skip emit ${s.file.path} (outside root)`)
       } else {
-        log(`skip emit ${s.relPath ?? s.file.path} (target is watched)`)
+        // Remove the skip for watched targets as per plan
       }
     }
     for (const file of emittable) {
       const absPath = file.path
       if ('type' in file && file.type === 'delete') {
         const removed = await removeIfExists(absPath)
-        if (removed) summary.deleted += 1
-        else summary.skipped += 1
+        if (removed) {
+          summary.deleted += 1
+          logger.emit.info(`deleted ${toRelPath(root, absPath)}`)
+        } else summary.skipped += 1
       } else if ('content' in file) {
         const written = await writeIfChanged(absPath, file.content)
-        if (written) summary.written += 1
-        else summary.skipped += 1
+        if (written) {
+          summary.written += 1
+          logger.emit.info(`written ${toRelPath(root, absPath)}`)
+        } else summary.skipped += 1
       }
     }
     return summary
