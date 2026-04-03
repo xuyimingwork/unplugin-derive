@@ -8,6 +8,7 @@ import type { DeriveOptionLoadResolved } from './load-resolver'
 import type { DeriveOptionsResolved } from './options'
 import type { DeriveTask } from './queue'
 import type { Emit } from './emitter'
+import { shutdownImportWorkers } from './load-import.js'
 
 export type DeriveContext = {
   load: (task: DeriveTask) => Promise<DeriveEvent>
@@ -45,13 +46,17 @@ function filterWatchedChanges(watches: string[], changes: DeriveChange[]): Deriv
 }
 
 async function loadChanges(changes: DeriveChange[], load: DeriveOptionLoadResolved): Promise<DeriveChange[]> {
-  return Promise.all(
-    changes.map(async change => {
-      const result = await load(change.path)
-      if (!result || typeof result !== 'object' || !('content' in result)) return change
-      return { ...change, content: result.content, loader: result.loader }
-    })
-  )
+  try {
+    return await Promise.all(
+      changes.map(async change => {
+        const result = await load(change.path)
+        if (!result || typeof result !== 'object' || !('content' in result)) return change
+        return { ...change, content: result.content, loader: result.loader }
+      })
+    )
+  } finally {
+    await shutdownImportWorkers().catch(() => {})
+  }
 }
 
 function countChangesWithContent(changes: DeriveChange[]): number {

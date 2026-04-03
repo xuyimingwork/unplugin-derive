@@ -1,7 +1,7 @@
 import fs from 'node:fs'
-import { pathToFileURL } from 'node:url'
 import { logger } from './logger.js'
 import { toRelPath } from './path.js'
+import { importModuleFresh } from './load-import.js'
 import type {
   DeriveOptionLoad,
   DeriveLoader,
@@ -16,7 +16,7 @@ const LEGACY_BUILTIN_LOADER_NAMES = ['text', 'json', 'buffer', 'import'] as cons
 
 const BUILTIN_LOADERS: Record<DeriveLoaderBuiltin, DeriveLoaderBase> = {
   _buffer: async absPath => ({ content: await fs.promises.readFile(absPath), loader: '_buffer' }),
-  _import: async absPath => ({ content: await import(pathToFileURL(absPath).href), loader: '_import' }),
+  _import: async absPath => ({ content: await importModuleFresh(absPath), loader: '_import' }),
   _text: async absPath => ({ content: await fs.promises.readFile(absPath, 'utf8'), loader: '_text' }),
   _json: async absPath => ({ content: JSON.parse(await fs.promises.readFile(absPath, 'utf8')), loader: '_json' }),
 }
