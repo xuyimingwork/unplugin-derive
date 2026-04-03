@@ -54,6 +54,10 @@ async function loadChanges(changes: DeriveChange[], load: DeriveOptionLoadResolv
   )
 }
 
+function countChangesWithContent(changes: DeriveChange[]): number {
+  return changes.filter(c => 'content' in c).length
+}
+
 export function createDeriveContext(options: DeriveOptionsResolved): DeriveContext {
   const hooks = createRuntimeHooks(options)
   const { derive } = options
@@ -79,8 +83,14 @@ function createTaskLoad(options: DeriveOptionsResolved): DeriveContext['load'] {
     const rawChanges = task.type === 'full'
       ? await getFullChanges(watch)
       : getPatchChanges(task.changes, { root, watch })
+    logger.context.info(`load_changes: ${task.type}, ${rawChanges.length} path(s)`)
     logger.context.debug(`task ${task.type} rawChanges count: ${rawChanges.length}`)
     const loaded = await loadChanges(rawChanges, load)
+    const withContent = countChangesWithContent(loaded)
+    logger.context.info(`load_changes: done, ${withContent}/${loaded.length} with content`)
+    if (withContent < loaded.length) {
+      logger.context.debug(`load_changes: ${loaded.length - withContent} path(s) without loaded content`)
+    }
     logger.context.debug(`task ${task.type} loaded changes count: ${loaded.length}`)
     return {
       type: task.type,

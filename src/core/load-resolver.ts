@@ -77,8 +77,8 @@ function createDeriveLoad(
         logger.load.debug(`load try failed for ${path}: ${e?.message || e}`)
       }
     }
-    // 所有加载器尝试完毕，无法加载
-    logger.load.error(`load failed for ${path}`)
+    // 所有加载器尝试完毕，未得到 content（非用户错误，与单次 try 失败同属调试信息）
+    logger.load.debug(`no loader produced content for ${path}`)
     return undefined
   }
 }

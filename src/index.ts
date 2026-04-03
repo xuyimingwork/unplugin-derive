@@ -15,27 +15,27 @@ export const unpluginDerive = createUnplugin<DeriveOptions | undefined>(
     if (!userOptions) throw new Error('unplugin-derive options are required.')
     const options = resolveOptions(userOptions)
     const runtime = createDeriveRuntime(createDeriveContext(options))
-    logger.plugin.info('inited')
+    logger.plugin.info('plugin inited')
     return {
       name: 'unplugin-derive',
       buildStart() {
         if (options.deriveWhen.buildStart === 'none') {
-          logger.plugin.info('buildStart skipped because deriveWhen.buildStart=none')
+          logger.plugin.info('trigger skipped: deriveWhen.buildStart=none')
           return
         }
-        logger.plugin.info('buildStart execution: trigger full derive')
+        logger.plugin.info('trigger full derive via buildStart')
         return runtime.run({ type: 'full', changes: [] })
       },
       watchChange(id: string, change?: { event?: string }) {
         if (options.deriveWhen.watchChange === 'none') {
-          logger.plugin.info('watchChange skipped (deriveWhen.watchChange=none)')
+          logger.plugin.info('trigger skipped: deriveWhen.watchChange=none')
           return
         }
         if (options.deriveWhen.watchChange === 'full') {
-          logger.plugin.info('watchChange execution full derive')
+          logger.plugin.info('trigger full derive via watchChange')
           return runtime.run({ type: 'full', changes: [] })
         }
-        logger.plugin.info('watchChange execution patch derive', mapWatchEventType(change?.event), id)
+        logger.plugin.info('trigger patch derive via watchChange', mapWatchEventType(change?.event), id)
         return runtime.run({
           type: 'patch',
           changes: [

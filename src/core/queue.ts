@@ -54,25 +54,25 @@ function mergeChangesByPath(prev: DeriveChange[], next: DeriveChange[]): DeriveC
 }
 
 function enqueueTask(state: TaskQueueState, task: DeriveTask): void {
-  logger.runtime.info(`enqueue task: ${task.type}${task.type === 'patch' ? ` (${task.changes.length} changes)` : ''}`)
+  logger.runtime.debug(`enqueue task: ${task.type}${task.type === 'patch' ? ` (${task.changes.length} changes)` : ''}`)
 
   if (task.type === 'full') {
     // Full rebuild supersedes all pending patch tasks.
     state.tasks = [task]
-    logger.runtime.info('full task set, pending tasks dropped')
+    logger.runtime.info('queue: full task replaces pending queue')
     return
   }
 
   // Patch tasks are redundant if a full rebuild is already queued.
   if (state.tasks.some(v => v.type === 'full')) {
-    logger.runtime.info('ignore patch task because full task is in queue')
+    logger.runtime.debug('ignore patch task because full task is in queue')
     return
   }
 
   const lastTask = state.tasks[state.tasks.length - 1]
   if (lastTask?.type === 'patch') {
     lastTask.changes = mergeChangesByPath(lastTask.changes, task.changes)
-    logger.runtime.info('merge patch task into existing pending patch')
+    logger.runtime.debug('merge patch task into existing pending patch')
     return
   }
 
@@ -80,7 +80,7 @@ function enqueueTask(state: TaskQueueState, task: DeriveTask): void {
     type: 'patch',
     changes: mergeChangesByPath([], task.changes)
   })
-  logger.runtime.info('append patch task to queue')
+  logger.runtime.debug('append patch task to queue')
 }
 
 async function runPendingTasks(state: TaskQueueState, worker: DeriveTaskWorker): Promise<void> {
@@ -90,9 +90,11 @@ async function runPendingTasks(state: TaskQueueState, worker: DeriveTaskWorker):
         while (state.tasks.length > 0) {
           const nextTask = state.tasks.shift()
           if (!nextTask) continue
-          logger.runtime.info(`running task: ${nextTask.type}${nextTask.type === 'patch' ? ` (${nextTask.changes.length} changes)` : ''}`)
+          logger.runtime.debug(
+            `run task: ${nextTask.type}${nextTask.type === 'patch' ? ` (${nextTask.changes.length} changes)` : ''}`
+          )
           await worker(nextTask)
-          logger.runtime.info(`finished task: ${nextTask.type}`)
+          logger.runtime.debug(`finished task: ${nextTask.type}`)
         }
       } finally {
         state.activeRun = undefined
