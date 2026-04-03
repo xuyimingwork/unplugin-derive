@@ -90,7 +90,10 @@ class WorkerWrapper {
   jobs = new Map<number, PendingJob>()
 
   constructor() {
-    this.worker = new Worker(INLINE_WORKER_CODE, { eval: true })
+    this.worker = new Worker(INLINE_WORKER_CODE, { 
+      eval: true,
+      execArgv: ['--no-warnings']
+    })
 
     this.worker.on('message', this.onMessage)
     this.worker.on('error', this.onError)
@@ -155,7 +158,10 @@ class WorkerWrapper {
   reset = () => {
     this.busy = false
     this.worker.terminate().catch(() => {})
-    this.worker = new Worker(INLINE_WORKER_CODE, { eval: true })
+    this.worker = new Worker(INLINE_WORKER_CODE, { 
+      eval: true,
+      execArgv: ['--no-warnings']
+    })
 
     this.worker.on('message', this.onMessage)
     this.worker.on('error', this.onError)
