@@ -1,4 +1,4 @@
-import type { DeriveBanner, DeriveBannerData, DeriveBannerContext, DeriveBannerStyle } from '../types.js'
+import type { DeriveBanner, DeriveBannerData, DeriveBannerStyle } from '../types.js'
 import { template } from 'es-toolkit/compat'
 
 const DEFAULT_STYLE: DeriveBannerStyle = 'block-jsdoc'
@@ -40,7 +40,7 @@ function renderOverviewLines(node: DeriveBannerData['overview'] | undefined, dep
   return lines
 }
 
-function wrapAsComment(body: string, style: DeriveBannerStyle): string {
+function toCommentBlock(body: string, style: DeriveBannerStyle): string {
   const normalizedBody = String(body).replace(/\r\n?/g, '\n')
   const escapedBody = style === 'block-star' || style === 'block-jsdoc'
     ? normalizedBody.replace(/\*\//g, '*\\/')
@@ -61,7 +61,7 @@ function wrapAsComment(body: string, style: DeriveBannerStyle): string {
 }
 
 type BannerConfig = Exclude<DeriveBanner, false> & { disabled?: boolean }
-function resolveBannerConfig(banners: (DeriveBanner | undefined)[]): BannerConfig {
+function mergeBannerConfig(banners: (DeriveBanner | undefined)[]): BannerConfig {
   if (!Array.isArray(banners)) return { disabled: true }
   return banners.reduce<BannerConfig>((config, banner) => {
     if (banner === undefined) return config
@@ -107,23 +107,22 @@ export function getBanner(
     content: string
   }
 ): string {
-  const config = resolveBannerConfig(banners)
+  const config = mergeBannerConfig(banners)
   if (config.disabled) return ''
 
   const style = config.style ?? DEFAULT_STYLE
-  const context: DeriveBannerContext = { 
-    path, 
-    content, 
-    data: config.data || {}, 
-    style 
-  }
-
   const formatter = getBannerFormatter({ 
     template: config.template,  
     formatter: config.formatter
   })
 
-  const body = formatter(context).trim()
+  const body = formatter({ 
+    path, 
+    content, 
+    data: config.data || {}, 
+    style 
+  }).trim()
+
   if (!body.trim()) return ''
-  return `${wrapAsComment(body, style)}\n\n`
+  return `${toCommentBlock(body, style)}\n\n`
 }
