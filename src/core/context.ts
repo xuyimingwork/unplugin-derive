@@ -1,12 +1,12 @@
 import fg from 'fast-glob'
-import { createEmit } from './emitter.js'
-import { createPrepareGitignore } from './gitignore-resolver.js'
-import { isPathWatched, normalizeIncomingAbsPath } from './path.js'
-import type { DeriveChange, DeriveEvent } from '../types.js'
-import type { DeriveOptionLoadResolved } from './load-resolver.js'
-import type { DeriveOptionsResolved } from './options.js'
-import type { DeriveTask } from './queue.js'
-import type { Emit } from './emitter.js'
+import { createEmit } from './emitter'
+import { createPrepareGitignore } from './gitignore-resolver'
+import { isPathWatched, normalizeIncomingAbsPath } from './path'
+import type { DeriveChange, DeriveEvent } from '@/types'
+import type { DeriveOptionLoadResolved } from './load-resolver'
+import type { DeriveOptionsResolved } from './options'
+import type { DeriveTask } from './queue'
+import type { Emit } from './emitter'
 
 export type DeriveContext = {
   log: (message: string) => void

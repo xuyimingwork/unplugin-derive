@@ -7,7 +7,7 @@ import type {
   DeriveLoaderBase,
   DeriveLoaderBuiltin,
   DeriveLoaderResult,
-} from '../types.js'
+} from '@/types'
 
 export type DeriveOptionLoadResolved = (path: string) => Promise<DeriveLoaderResult>
 

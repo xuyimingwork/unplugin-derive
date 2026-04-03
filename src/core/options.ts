@@ -1,11 +1,11 @@
 import path from 'node:path'
-import { PLUGIN_NAME } from './constants.js'
-import { normalizeRelPath, normalizeSlashes, toRelPath } from './path.js'
-import { createLoadResolver } from './load-resolver.js'
-import { createDeriveResolver } from './derive-resolver.js'
-import type { DeriveBuildStartType, DeriveOptionGitignore, DeriveOptions, DeriveWatchChangeType } from '../types.js'
-import type { DeriveOptionLoadResolved } from './load-resolver.js'
-import type { DeriveResolved } from './derive-resolver.js'
+import { PLUGIN_NAME } from './constants'
+import { normalizeRelPath, normalizeSlashes } from './path'
+import { createLoadResolver } from './load-resolver'
+import { createDeriveResolver } from './derive-resolver'
+import type { DeriveBuildStartType, DeriveOptionGitignore, DeriveOptions, DeriveWatchChangeType } from '@/types'
+import type { DeriveOptionLoadResolved } from './load-resolver'
+import type { DeriveResolved } from './derive-resolver'
 
 export type DeriveWhenResolved = {
   buildStart: DeriveBuildStartType

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getBanner } from '../src/core/banner.ts'
+import { getBanner } from '../src/core/banner/banner.ts'
 
 describe('getBanner', () => {
   it('should merge later banner over earlier banner', () => {

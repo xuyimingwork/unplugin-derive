@@ -1,7 +1,7 @@
 import { ensureGitignoreEntries } from './gitignore.js'
 import { filterEmittableFiles } from './emitter.js'
 import { normalizeSlashes, toRelPath } from './path.js'
-import type { DeriveOptions, DeriveResult, GitignoreMatcher } from '../types.js'
+import type { DeriveOptions, DeriveResult, GitignoreMatcher } from '@/types'
 
 type NormalizedGitignore = {
   matcher: GitignoreMatcher | undefined

@@ -1,6 +1,6 @@
-import type { DeriveBanner, DeriveEvent, DeriveOptionDerive, DeriveResultFile, DeriveResultResolved } from '../types.js'
-import { normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path.js'
-import { getBanner } from './banner.js'
+import type { DeriveBanner, DeriveEvent, DeriveOptionDerive, DeriveResultFile, DeriveResultResolved } from '@/types'
+import { normalizeRelPath, normalizeSlashes, toAbsPath, toRelPath } from './path'
+import { getBanner } from './banner/banner'
 
 export type DeriveResolved = (event: DeriveEvent) => Promise<DeriveResultResolved>
 

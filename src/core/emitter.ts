@@ -1,6 +1,6 @@
-import type { DeriveResult, DeriveResultFile } from '../types.js'
-import { removeIfExists, writeIfChanged } from './fs.js'
-import { isPathWatched, isWithinRoot, toRelPath } from './path.js'
+import type { DeriveResult, DeriveResultFile } from '@/types'
+import { removeIfExists, writeIfChanged } from './fs'
+import { isPathWatched, isWithinRoot, toRelPath } from './path'
 
 export type EmitSummary = {
   written: number

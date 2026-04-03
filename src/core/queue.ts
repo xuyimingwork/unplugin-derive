@@ -1,4 +1,4 @@
-import type { DeriveChange, DeriveChangeType } from '../types.js'
+import type { DeriveChange, DeriveChangeType } from '@/types'
 
 export type DeriveTask =
   | {

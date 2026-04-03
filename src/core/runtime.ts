@@ -1,7 +1,7 @@
-import { createTaskQueue } from './queue.js'
-import type { DeriveEvent } from '../types.js'
-import type { DeriveTask } from './queue.js'
-import type { DeriveContext } from './context.js'
+import { createTaskQueue } from './queue'
+import type { DeriveEvent } from '@/types'
+import type { DeriveTask } from './queue'
+import type { DeriveContext } from './context'
 
 type Runtime = {
   run: (event: DeriveEvent) => Promise<void>
