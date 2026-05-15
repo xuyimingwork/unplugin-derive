@@ -1,7 +1,9 @@
 import type { DeriveBanner, DeriveBannerStyle } from '@/types'
 import { getBannerFormatter } from './formatter.js'
+import { name } from '~/package.json'
 
 const DEFAULT_STYLE: DeriveBannerStyle = 'block-jsdoc'
+const DEFAULT_DATA_AUTHOR = name
 
 function toCommentBlock(body: string, style: DeriveBannerStyle): string {
   const normalizedBody = String(body).replace(/\r\n?/g, '\n')
@@ -23,12 +25,13 @@ function toCommentBlock(body: string, style: DeriveBannerStyle): string {
   return `/**\n${content}\n */`
 }
 
-type BannerConfig = Exclude<DeriveBanner, false> & { disabled?: boolean }
+type BannerConfig = Exclude<DeriveBanner, boolean> & { disabled?: boolean }
 function mergeBannerConfig(banners: (DeriveBanner | undefined)[]): BannerConfig {
   if (!Array.isArray(banners)) return { disabled: true }
   return banners.reduce<BannerConfig>((config, banner) => {
     if (banner === undefined) return config
     if (banner === false) return { ...config, disabled: true }
+    if (banner === true) banner = {}
     return {
       ...config,
       ...banner,
@@ -38,7 +41,7 @@ function mergeBannerConfig(banners: (DeriveBanner | undefined)[]): BannerConfig 
         ...(banner.data || {})
       }
     }
-  }, { disabled: true })
+  }, { data: { author: DEFAULT_DATA_AUTHOR }, disabled: true })
 }
 
 export function getBanner(

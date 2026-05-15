@@ -46,25 +46,26 @@ export type DeriveBanner = {
   template?: string
   formatter?: (context: DeriveBannerContext) => string
   data?: DeriveBannerData
-} | false
+} | boolean
 
 export type DeriveResultFile =
-  | { path: string; content: string; banner?: DeriveBanner }
+  | DeriveFileResolved & { banner?: DeriveBanner }
   | { path: string; type: 'delete' }
-
 
 export type DeriveResult = {
   files: DeriveResultFile[]
   banner?: DeriveBanner
 }
 
-export type DeriveFileResolved =
-  | { path: string; content: string }
+export type DeriveResultResolved = {
+  files: DeriveResultFileResolved[]
+}
+
+export type DeriveResultFileResolved =
+  | DeriveFileResolved
   | { path: string; type: 'delete' }
 
-export type DeriveResultResolved = {
-  files: DeriveFileResolved[]
-}
+export type DeriveFileResolved = { path: string; content: string }
 
 export type Promisable<T> = T | Promise<T>
 export type DeriveLoaderResult = { content: unknown; loader?: string } | undefined

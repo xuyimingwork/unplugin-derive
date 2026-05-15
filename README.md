@@ -22,7 +22,7 @@ export default defineConfig({
   plugins: [
     Derive({
       watch: ['src/api/**/*.js'],
-      load: 'text',
+      load: '_text',
       async derive(event) {
         const count = event.changes.length
         const content = `// generated from ${event.type}, files: ${count}\n`
@@ -30,7 +30,6 @@ export default defineConfig({
           files: [{ path: 'src/generated.txt', content }]
         }
       },
-      verbose: true
     })
   ]
 })
@@ -106,7 +105,7 @@ await build({
 
 ## 配置总览
 
-- **通用配置**: `root`、`verbose`
+- **通用配置**: `root`、`debug`
 - **监听触发**: `watch`、`deriveWhen`
 - **派生输出**: `derive`
 - **内容加载**: `load`
@@ -125,10 +124,10 @@ await build({
 
 ## 按执行顺序的配置详解
 
-### 0) `root` 与 `verbose`（通用项）
+### 0) `root` 与 `debug`（通用项）
 
 - `root`: 工程根目录（默认 `process.cwd()`）
-- `verbose`: 输出运行日志（默认 `false`）
+- `debug`: 运行日志（默认不输出）
 
 ### 1) `watch` 与 `deriveWhen`（何时触发）
 
@@ -262,7 +261,7 @@ Derive({
 
 1) **只用默认模板（最省事）**
 
-- 只要最终合并后的 `banner.data.author` 存在，就会渲染内置默认模板；否则不输出 banner。
+- 默认不输出 banner，只要配置数据，就会添加 banner 信息。
 
 ```ts
 Derive({
