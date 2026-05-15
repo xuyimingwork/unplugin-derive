@@ -137,7 +137,7 @@ await build({
 - `deriveWhen.watchChange`: `patch` | `full` | `none`（默认 `patch`）
 - 当 `watchChange: "full"` 时，仅在变更路径命中 `watch` 时触发 full
 
-### 2) `load`（如何加载内容）
+### 2) `load`（如何加载内容，不配置时不加载）
 
 `load` 支持 5 种常见配置形态：
 
